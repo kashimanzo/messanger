@@ -1,0 +1,40 @@
+{
+  "name": "mobile",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "apps/mobile/src",
+  "projectType": "application",
+  "tags": ["type:app", "scope:mobile"],
+  "targets": {
+    "cap-sync": {
+      "dependsOn": ["build"],
+      "command": "pnpm exec cap sync",
+      "options": {
+        "cwd": "{workspaceRoot}"
+      }
+    },
+    "cap-open-ios": {
+      "command": "pnpm exec cap open ios",
+      "options": {
+        "cwd": "{workspaceRoot}"
+      }
+    },
+    "cap-open-android": {
+      "command": "pnpm exec cap open android",
+      "options": {
+        "cwd": "{workspaceRoot}"
+      }
+    },
+    "cap-add-ios": {
+      "command": "pnpm exec cap add ios",
+      "options": {
+        "cwd": "{workspaceRoot}"
+      }
+    },
+    "cap-add-android": {
+      "command": "pnpm exec cap add android",
+      "options": {
+        "cwd": "{workspaceRoot}"
+      }
+    }
+  }
+}

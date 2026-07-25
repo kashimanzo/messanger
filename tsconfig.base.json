@@ -1,0 +1,36 @@
+{
+  "compileOnSave": false,
+  "compilerOptions": {
+    "rootDir": ".",
+    "sourceMap": true,
+    "declaration": false,
+    "moduleResolution": "bundler",
+    "emitDecoratorMetadata": true,
+    "experimentalDecorators": true,
+    "importHelpers": true,
+    "target": "es2022",
+    "module": "esnext",
+    "lib": ["es2022", "dom"],
+    "skipLibCheck": true,
+    "skipDefaultLibCheck": true,
+    "baseUrl": ".",
+    "strict": true,
+    "paths": {
+      "@bulk-messanger/database": ["packages/database/src/index.ts"],
+      "@bulk-messanger/env": ["packages/env/src/index.ts"],
+      "@bulk-messanger/env/client": ["packages/env/src/client.ts"],
+      "@bulk-messanger/env/features": ["packages/env/src/features.ts"],
+      "@bulk-messanger/auth/client": ["packages/auth/src/client.ts"],
+      "@bulk-messanger/auth": ["packages/auth/src/index.ts"],
+      "@bulk-messanger/trpc": ["packages/trpc/src/index.ts"],
+      "@bulk-messanger/trpc/server": ["packages/trpc/src/server.ts"],
+      "@bulk-messanger/trpc/links": ["packages/trpc/src/links.ts"],
+      "@bulk-messanger/ui": ["packages/ui/src/index.ts"],
+      "@bulk-messanger/whatsapp": ["packages/whatsapp/src/index.ts"],
+      "@bulk-messanger/clicksend": ["packages/clicksend/src/index.ts"],
+      "@bulk-messanger/queue": ["packages/queue/src/index.ts"],
+      "@bulk-messanger/queue/worker": ["packages/queue/src/worker.ts"]
+    }
+  },
+  "exclude": ["node_modules", "tmp"]
+}

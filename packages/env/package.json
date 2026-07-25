@@ -1,0 +1,13 @@
+{
+  "name": "@bulk-messanger/env",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts",
+    "./client": "./src/client.ts",
+    "./features": "./src/features.ts"
+  }
+}

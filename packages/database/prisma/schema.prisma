@@ -1,0 +1,195 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../src/generated/client"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String    @id @default(cuid())
+  name          String
+  email         String    @unique
+  emailVerified Boolean   @default(false)
+  image         String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  sessions      Session[]
+  accounts      Account[]
+  contacts         Contact[]
+  contactGroups    ContactGroup[]
+  messageCampaigns MessageCampaign[]
+  @@map("user")
+}
+
+enum CampaignType {
+  TEMPLATE
+  TEXT
+}
+
+enum CampaignChannel {
+  WHATSAPP
+  SMS
+}
+
+enum CampaignStatus {
+  QUEUED
+  PROCESSING
+  COMPLETED
+  FAILED
+  PARTIAL
+}
+
+enum CampaignMessageStatus {
+  PENDING
+  QUEUED
+  SENT
+  FAILED
+  SKIPPED_OPTOUT
+}
+
+model MessageCampaign {
+  id               String           @id @default(cuid())
+  userId           String
+  user             User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type             CampaignType
+  channel          CampaignChannel  @default(WHATSAPP)
+  status           CampaignStatus   @default(QUEUED)
+  templateName     String?
+  templateLanguage String?
+  textBody         String?
+  variables        Json?
+  groupId          String?
+  groupName        String?
+  totalCount       Int
+  sentCount        Int              @default(0)
+  failedCount      Int              @default(0)
+  pendingCount     Int
+  messages         CampaignMessage[]
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+  completedAt      DateTime?
+
+  @@index([userId, createdAt])
+  @@map("message_campaign")
+}
+
+model CampaignMessage {
+  id                String                @id @default(cuid())
+  campaignId        String
+  campaign          MessageCampaign       @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  phoneNumber       String
+  contactName       String?
+  status            CampaignMessageStatus @default(PENDING)
+  whatsappMessageId String?
+  providerMessageId String?
+  error             String?
+  attempts          Int                   @default(0)
+  sentAt            DateTime?
+  createdAt         DateTime              @default(now())
+  updatedAt         DateTime              @updatedAt
+
+  @@index([campaignId, status])
+  @@map("campaign_message")
+}
+
+model OptOutContact {
+  phoneNumber String   @id
+  reason      String?
+  createdAt   DateTime @default(now())
+
+  @@map("opt_out_contact")
+}
+
+enum ContactSource {
+  MANUAL
+  IMPORTED
+}
+
+model Contact {
+  id              String        @id @default(cuid())
+  userId          String
+  user            User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name            String
+  phoneNumber     String
+  email           String?
+  source          ContactSource @default(MANUAL)
+  deviceContactId String?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+  groupMembers    ContactGroupMember[]
+
+  @@unique([userId, phoneNumber])
+  @@index([userId, name])
+  @@map("contact")
+}
+
+model ContactGroup {
+  id        String               @id @default(cuid())
+  userId    String
+  user      User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name      String
+  members   ContactGroupMember[]
+  createdAt DateTime             @default(now())
+  updatedAt DateTime             @updatedAt
+
+  @@index([userId, name])
+  @@map("contact_group")
+}
+
+model ContactGroupMember {
+  id        String       @id @default(cuid())
+  groupId   String
+  contactId String
+  group     ContactGroup @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  contact   Contact      @relation(fields: [contactId], references: [id], onDelete: Cascade)
+
+  @@unique([groupId, contactId])
+  @@map("contact_group_member")
+}
+
+model Session {
+  id        String   @id @default(cuid())
+  expiresAt DateTime
+  token     String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  ipAddress String?
+  userAgent String?
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("session")
+}
+
+model Account {
+  id                    String    @id @default(cuid())
+  accountId             String
+  providerId            String
+  userId                String
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  accessToken           String?
+  refreshToken          String?
+  idToken               String?
+  accessTokenExpiresAt  DateTime?
+  refreshTokenExpiresAt DateTime?
+  scope                 String?
+  password              String?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  @@map("account")
+}
+
+model Verification {
+  id         String   @id @default(cuid())
+  identifier String
+  value      String
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@map("verification")
+}

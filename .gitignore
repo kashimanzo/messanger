@@ -1,1 +1,41 @@
-#gitignore file
+.nx/installation
+.nx/cache
+.nx/workspace-data
+.nx/self-healing
+vite.config.*.timestamp*
+
+# Dependencies
+node_modules
+
+# Build
+dist
+tmp
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Next.js
+.next
+out
+
+# Prisma
+packages/database/src/generated
+
+# Capacitor native projects
+apps/mobile/ios
+apps/mobile/android
+
+# IDE
+.idea
+.vscode
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log

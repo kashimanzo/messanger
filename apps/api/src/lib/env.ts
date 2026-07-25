@@ -1,0 +1,1 @@
+import '@bulk-messanger/env';

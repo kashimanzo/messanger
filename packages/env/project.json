@@ -1,0 +1,7 @@
+{
+  "name": "env",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "packages/env/src",
+  "projectType": "library",
+  "tags": ["type:lib", "scope:shared"]
+}

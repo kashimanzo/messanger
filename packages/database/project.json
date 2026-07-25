@@ -1,0 +1,27 @@
+{
+  "name": "database",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "packages/database/src",
+  "projectType": "library",
+  "tags": ["type:lib", "scope:shared"],
+  "targets": {
+    "generate": {
+      "command": "prisma generate --schema=packages/database/prisma/schema.prisma",
+      "options": {
+        "cwd": "{workspaceRoot}"
+      }
+    },
+    "push": {
+      "command": "prisma db push --schema=packages/database/prisma/schema.prisma",
+      "options": {
+        "cwd": "{workspaceRoot}"
+      }
+    },
+    "studio": {
+      "command": "prisma studio --schema=packages/database/prisma/schema.prisma",
+      "options": {
+        "cwd": "{workspaceRoot}"
+      }
+    }
+  }
+}

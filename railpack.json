@@ -1,0 +1,15 @@
+{
+  "$schema": "https://schema.railpack.com",
+  "provider": "node",
+  "steps": {
+    "build": {
+      "variables": {
+        "SKIP_ENV_VALIDATION": "1"
+      },
+      "commands": ["...", "pnpm build:api"]
+    }
+  },
+  "deploy": {
+    "startCommand": "pnpm start"
+  }
+}
