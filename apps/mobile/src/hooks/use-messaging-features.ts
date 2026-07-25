@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useMemo } from 'react';
 import { trpc } from '../lib/trpc';
 import { useFeaturesStore } from '../stores/features-store';
 
@@ -10,7 +10,16 @@ function parseBool(value: string | undefined, fallback: boolean) {
   return ['1', 'true', 'yes', 'on'].includes(value.toLowerCase());
 }
 
-/** Client-side fallback when the API features call fails (stale deploy, offline). */
+function hasExplicitViteSmsFlag() {
+  const value = import.meta.env.VITE_FEATURE_SMS_ENABLED;
+  return value !== undefined && String(value).trim() !== '';
+}
+
+/**
+ * Build-time mobile feature mode from apps/mobile/.env.
+ * Used when VITE_FEATURE_SMS_ENABLED is set so the native app is not overridden
+ * by a Railway API that still has FEATURE_SMS_ENABLED unset/false.
+ */
 function getViteFeatureFallback() {
   const smsEnabled = parseBool(
     import.meta.env.VITE_FEATURE_SMS_ENABLED,
@@ -25,14 +34,18 @@ function getViteFeatureFallback() {
     whatsappEnabled,
     smsEnabled,
     channels,
-    defaultChannel: channels[0] ?? null,
-    clickSendFrom: null as string | null,
+    defaultChannel: (channels[0] ?? null) as 'WHATSAPP' | 'SMS' | null,
+    clickSendFrom:
+      (import.meta.env.VITE_CLICKSEND_FROM as string | undefined)?.trim() ||
+      null,
   };
 }
 
 export function useMessagingFeatures() {
   const features = useFeaturesStore((state) => state.features);
   const setFeatures = useFeaturesStore((state) => state.setFeatures);
+  const preferVite = hasExplicitViteSmsFlag();
+  const viteFallback = useMemo(() => getViteFeatureFallback(), []);
 
   const query = trpc.getMessagingFeatures.useQuery(undefined, {
     staleTime: 5 * 60 * 1000,
@@ -40,13 +53,30 @@ export function useMessagingFeatures() {
   });
 
   useEffect(() => {
-    if (query.data) {
-      setFeatures(query.data);
+    if (!query.data) {
+      return;
     }
-  }, [query.data, setFeatures]);
 
-  const fallback = getViteFeatureFallback();
-  const resolved = features ?? query.data ?? (query.isError ? fallback : null);
+    if (preferVite) {
+      setFeatures({
+        ...viteFallback,
+        // Keep server sender when API is also in SMS mode; otherwise Vite value.
+        clickSendFrom:
+          query.data.smsEnabled && query.data.clickSendFrom
+            ? query.data.clickSendFrom
+            : viteFallback.clickSendFrom,
+      });
+      return;
+    }
+
+    setFeatures(query.data);
+  }, [preferVite, query.data, setFeatures, viteFallback]);
+
+  const resolved =
+    features ??
+    (preferVite
+      ? viteFallback
+      : query.data ?? (query.isError ? viteFallback : null));
 
   return {
     whatsappEnabled: resolved?.whatsappEnabled ?? false,
