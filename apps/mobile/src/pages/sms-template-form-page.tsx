@@ -11,7 +11,6 @@ import {
 } from '@mui/material';
 import { useFeedback } from '../components/feedback-provider';
 import { MobileAppBar } from '../components/mobile-app-bar';
-import { useMessagingFeatures } from '../hooks/use-messaging-features';
 import { getErrorMessage } from '../lib/get-error-message';
 import { trpc } from '../lib/trpc';
 
@@ -21,7 +20,6 @@ export function SmsTemplateFormPage() {
   const { templateId } = useParams();
   const editingId = templateId ? Number(templateId) : null;
   const isEditing = Number.isFinite(editingId) && (editingId as number) > 0;
-  const { smsEnabled, isLoading: featuresLoading } = useMessagingFeatures();
 
   const [templateName, setTemplateName] = useState('');
   const [body, setBody] = useState('');
@@ -29,7 +27,7 @@ export function SmsTemplateFormPage() {
   const utils = trpc.useUtils();
   const existing = trpc.getClickSendTemplate.useQuery(
     { templateId: editingId as number },
-    { enabled: Boolean(smsEnabled && isEditing) },
+    { enabled: Boolean(isEditing) },
   );
 
   useEffect(() => {
@@ -54,24 +52,6 @@ export function SmsTemplateFormPage() {
 
   const isPending = createTemplate.isPending || updateTemplate.isPending;
 
-  if (featuresLoading) {
-    return (
-      <Container maxWidth="sm" sx={{ py: 6, display: 'flex', justifyContent: 'center' }}>
-        <CircularProgress />
-      </Container>
-    );
-  }
-
-  if (!smsEnabled) {
-    return (
-      <Container maxWidth="sm" sx={{ py: 6 }}>
-        <Alert severity="warning">SMS mode is disabled.</Alert>
-        <Button sx={{ mt: 2 }} onClick={() => navigate('/home')}>
-          Back home
-        </Button>
-      </Container>
-    );
-  }
 
   const handleSave = async () => {
     if (!templateName.trim() || !body.trim()) {

@@ -114,7 +114,7 @@ export function CampaignDetailPage() {
 
             <Stack spacing={1}>
               <Stack direction="row" spacing={1} alignItems="center">
-                <Chip label={campaign.channel === 'SMS' ? 'SMS' : 'WhatsApp'} variant="outlined" />
+                <Chip label="SMS" variant="outlined" />
                 <Chip label={campaign.status} color="primary" />
                 <Typography variant="body2" color="text.secondary">
                   {campaign.messagesPerSecond} msgs/sec limit

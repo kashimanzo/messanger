@@ -24,24 +24,19 @@ import {
 import { useFeedback } from '../components/feedback-provider';
 import { MobileAppBar } from '../components/mobile-app-bar';
 import { useContacts } from '../hooks/use-contacts';
-import { useMessagingFeatures } from '../hooks/use-messaging-features';
 import { getErrorMessage } from '../lib/get-error-message';
 import { trpc } from '../lib/trpc';
 
 export function SendClickSendCampaignPage() {
   const navigate = useNavigate();
   const { showError, showSuccess } = useFeedback();
-  const {
-    smsEnabled,
-    clickSendFrom,
-    isLoading: featuresLoading,
-  } = useMessagingFeatures();
+  const clickSendFrom = import.meta.env.VITE_CLICKSEND_FROM?.trim() || null;
   const { data: groups } = trpc.listContactGroups.useQuery(undefined, {
-    enabled: smsEnabled,
+    enabled: true,
   });
   const { allContacts: contacts } = useContacts();
   const templatesQuery = trpc.listClickSendTemplates.useQuery(undefined, {
-    enabled: smsEnabled,
+    enabled: true,
   });
 
   const [name, setName] = useState('');
@@ -198,22 +193,6 @@ export function SendClickSendCampaignPage() {
       showError(getErrorMessage(error, 'Failed to send campaign.'));
     }
   };
-
-  if (featuresLoading) {
-    return (
-      <Container maxWidth="sm" sx={{ py: 6, display: 'flex', justifyContent: 'center' }}>
-        <CircularProgress />
-      </Container>
-    );
-  }
-
-  if (!smsEnabled) {
-    return (
-      <Container maxWidth="sm" sx={{ py: 6 }}>
-        <Alert severity="warning">SMS mode is disabled.</Alert>
-      </Container>
-    );
-  }
 
   const busy = calculatePrice.isPending || sendCampaign.isPending;
 

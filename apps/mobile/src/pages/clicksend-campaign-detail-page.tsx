@@ -14,7 +14,6 @@ import {
 } from '@mui/material';
 import { MobileAppBar } from '../components/mobile-app-bar';
 import { useFeedback } from '../components/feedback-provider';
-import { useMessagingFeatures } from '../hooks/use-messaging-features';
 import { getErrorMessage } from '../lib/get-error-message';
 import { trpc } from '../lib/trpc';
 
@@ -31,12 +30,11 @@ export function ClickSendCampaignDetailPage() {
   const { id } = useParams();
   const { showError, showSuccess } = useFeedback();
   const smsCampaignId = Number(id);
-  const { smsEnabled, isLoading: featuresLoading } = useMessagingFeatures();
   const utils = trpc.useUtils();
 
   const campaignQuery = trpc.getClickSendCampaign.useQuery(
     { smsCampaignId },
-    { enabled: smsEnabled && Number.isFinite(smsCampaignId) && smsCampaignId > 0 },
+    { enabled: Number.isFinite(smsCampaignId) && smsCampaignId > 0 },
   );
 
   const cancelCampaign = trpc.cancelClickSendCampaign.useMutation({
@@ -50,18 +48,10 @@ export function ClickSendCampaignDetailPage() {
     },
   });
 
-  if (featuresLoading || campaignQuery.isLoading) {
+  if (campaignQuery.isLoading) {
     return (
       <Container maxWidth="sm" sx={{ py: 6, display: 'flex', justifyContent: 'center' }}>
         <CircularProgress />
-      </Container>
-    );
-  }
-
-  if (!smsEnabled) {
-    return (
-      <Container maxWidth="sm" sx={{ py: 6 }}>
-        <Alert severity="warning">SMS mode is disabled.</Alert>
       </Container>
     );
   }

@@ -24,11 +24,6 @@ import {
 } from './groups';
 import type { TRPCContext } from './context';
 
-const templateVariableSchema = z.object({
-  component: z.enum(['body', 'header']),
-  index: z.number().int().min(0),
-  value: z.string().trim().min(1),
-});
 
 const t = initTRPC.context<TRPCContext>().create({
   transformer: superjson,
@@ -60,10 +55,6 @@ export const appRouter = router({
     status: 'ok' as const,
     timestamp: new Date().toISOString(),
   })),
-  getMessagingFeatures: publicProcedure.query(async () => {
-    const { getMessagingFeatures } = await import('@bulk-messanger/env/features');
-    return getMessagingFeatures();
-  }),
   getSession: publicProcedure.query(({ ctx }) => ctx.session),
   getProfile: protectedProcedure.query(({ ctx }) => ({
     id: ctx.user.id,
@@ -91,12 +82,6 @@ export const appRouter = router({
         name: user.name,
         email: user.email,
       };
-    }),
-  sendTestWhatsAppCampaign: protectedProcedure
-    .input(z.object({}).default({}))
-    .mutation(async () => {
-      const { sendBulkTestCampaign } = await import('@bulk-messanger/whatsapp');
-      return sendBulkTestCampaign();
     }),
   listContacts: protectedProcedure
     .input(
@@ -317,128 +302,6 @@ export const appRouter = router({
         results,
       };
     }),
-  listWhatsAppTemplates: protectedProcedure.query(async () => {
-    const { getMessagingFeatures } = await import('@bulk-messanger/env/features');
-    if (!getMessagingFeatures().whatsappEnabled) {
-      throw new TRPCError({
-        code: 'FORBIDDEN',
-        message: 'WhatsApp messaging is disabled',
-      });
-    }
-
-    const { listMessageTemplates } = await import('@bulk-messanger/whatsapp');
-    return listMessageTemplates();
-  }),
-  sendWhatsAppTemplateCampaign: protectedProcedure
-    .input(
-      z
-        .object({
-          templateName: z.string().trim().min(1),
-          language: z.string().trim().min(2),
-          variables: z.array(templateVariableSchema).default([]),
-          groupId: z.string().min(1).optional(),
-          contactIds: z.array(z.string().min(1)).max(500).optional(),
-          recipients: z.array(phoneNumberSchema).max(500).optional(),
-        })
-        .refine(
-          (input) =>
-            Boolean(input.groupId) ||
-            (input.contactIds?.length ?? 0) > 0 ||
-            (input.recipients?.length ?? 0) > 0,
-          {
-            message: 'Select a group, contacts, or recipients',
-          },
-        ),
-    )
-    .mutation(async ({ ctx, input }) => {
-      const { assertChannelEnabled } = await import('@bulk-messanger/env/features');
-      try {
-        assertChannelEnabled('WHATSAPP');
-      } catch (error) {
-        throw new TRPCError({
-          code: 'FORBIDDEN',
-          message: error instanceof Error ? error.message : 'WhatsApp disabled',
-        });
-      }
-
-      const { enqueueTemplateCampaign } = await import('@bulk-messanger/queue');
-      const { recipients, groupName } = await resolveCampaignRecipients(
-        ctx.user.id,
-        input,
-      );
-
-      if (recipients.length === 0) {
-        throw new TRPCError({
-          code: 'BAD_REQUEST',
-          message: 'No recipients found for this campaign',
-        });
-      }
-
-      return enqueueTemplateCampaign({
-        userId: ctx.user.id,
-        templateName: input.templateName,
-        language: input.language,
-        variables: input.variables,
-        groupId: input.groupId,
-        groupName,
-        recipients,
-      });
-    }),
-  sendWhatsAppMessage: protectedProcedure
-    .input(
-      z
-        .object({
-          message: z.string().trim().min(1).max(4096),
-          channel: z.enum(['WHATSAPP', 'SMS']).optional(),
-          groupId: z.string().min(1).optional(),
-          contactIds: z.array(z.string().min(1)).max(500).optional(),
-          recipients: z.array(phoneNumberSchema).max(500).optional(),
-        })
-        .refine(
-          (input) =>
-            Boolean(input.groupId) ||
-            (input.contactIds?.length ?? 0) > 0 ||
-            (input.recipients?.length ?? 0) > 0,
-          {
-            message: 'Select a group, contacts, or recipients',
-          },
-        ),
-    )
-    .mutation(async ({ ctx, input }) => {
-      const { assertChannelEnabled, getMessagingFeatures } = await import(
-        '@bulk-messanger/env/features'
-      );
-      const features = getMessagingFeatures();
-      const channel =
-        input.channel ??
-        (features.smsEnabled && !features.whatsappEnabled ? 'SMS' : 'WHATSAPP');
-
-      try {
-        assertChannelEnabled(channel);
-      } catch (error) {
-        throw new TRPCError({
-          code: 'FORBIDDEN',
-          message: error instanceof Error ? error.message : 'Channel disabled',
-        });
-      }
-
-      const { enqueueTextCampaign } = await import('@bulk-messanger/queue');
-      const { recipients } = await resolveCampaignRecipients(ctx.user.id, input);
-
-      if (recipients.length === 0) {
-        throw new TRPCError({
-          code: 'BAD_REQUEST',
-          message: 'No recipients found for this campaign',
-        });
-      }
-
-      return enqueueTextCampaign({
-        userId: ctx.user.id,
-        textBody: input.message,
-        channel,
-        recipients,
-      });
-    }),
   sendSmsCampaign: protectedProcedure
     .input(
       z
@@ -459,16 +322,6 @@ export const appRouter = router({
         ),
     )
     .mutation(async ({ ctx, input }) => {
-      const { assertChannelEnabled } = await import('@bulk-messanger/env/features');
-      try {
-        assertChannelEnabled('SMS');
-      } catch (error) {
-        throw new TRPCError({
-          code: 'FORBIDDEN',
-          message: error instanceof Error ? error.message : 'SMS disabled',
-        });
-      }
-
       const { enqueueTextCampaign } = await import('@bulk-messanger/queue');
       const { recipients } = await resolveCampaignRecipients(ctx.user.id, input);
 
@@ -608,10 +461,7 @@ export const appRouter = router({
         .optional(),
     )
     .query(async ({ input }) => {
-      const { assertSmsModeEnabled, toTrpcClickSendError } = await import(
-        './clicksend'
-      );
-      await assertSmsModeEnabled();
+      const { toTrpcClickSendError } = await import('./clicksend');
 
       try {
         const { listSmsTemplates } = await import('@bulk-messanger/clicksend');
@@ -627,10 +477,7 @@ export const appRouter = router({
   getClickSendTemplate: protectedProcedure
     .input(z.object({ templateId: z.number().int().positive() }))
     .query(async ({ input }) => {
-      const { assertSmsModeEnabled, toTrpcClickSendError } = await import(
-        './clicksend'
-      );
-      await assertSmsModeEnabled();
+      const { toTrpcClickSendError } = await import('./clicksend');
 
       try {
         const { getSmsTemplate } = await import('@bulk-messanger/clicksend');
@@ -648,10 +495,7 @@ export const appRouter = router({
       }),
     )
     .mutation(async ({ input }) => {
-      const { assertSmsModeEnabled, toTrpcClickSendError } = await import(
-        './clicksend'
-      );
-      await assertSmsModeEnabled();
+      const { toTrpcClickSendError } = await import('./clicksend');
 
       try {
         const { createSmsTemplate } = await import('@bulk-messanger/clicksend');
@@ -670,10 +514,7 @@ export const appRouter = router({
       }),
     )
     .mutation(async ({ input }) => {
-      const { assertSmsModeEnabled, toTrpcClickSendError } = await import(
-        './clicksend'
-      );
-      await assertSmsModeEnabled();
+      const { toTrpcClickSendError } = await import('./clicksend');
 
       try {
         const { updateSmsTemplate } = await import('@bulk-messanger/clicksend');
@@ -686,10 +527,7 @@ export const appRouter = router({
   deleteClickSendTemplate: protectedProcedure
     .input(z.object({ templateId: z.number().int().positive() }))
     .mutation(async ({ input }) => {
-      const { assertSmsModeEnabled, toTrpcClickSendError } = await import(
-        './clicksend'
-      );
-      await assertSmsModeEnabled();
+      const { toTrpcClickSendError } = await import('./clicksend');
 
       try {
         const { deleteSmsTemplate } = await import('@bulk-messanger/clicksend');
@@ -711,10 +549,7 @@ export const appRouter = router({
         .optional(),
     )
     .query(async ({ input }) => {
-      const { assertSmsModeEnabled, toTrpcClickSendError } = await import(
-        './clicksend'
-      );
-      await assertSmsModeEnabled();
+      const { toTrpcClickSendError } = await import('./clicksend');
 
       try {
         const { listSmsCampaigns } = await import('@bulk-messanger/clicksend');
@@ -730,10 +565,7 @@ export const appRouter = router({
   getClickSendCampaign: protectedProcedure
     .input(z.object({ smsCampaignId: z.number().int().positive() }))
     .query(async ({ input }) => {
-      const { assertSmsModeEnabled, toTrpcClickSendError } = await import(
-        './clicksend'
-      );
-      await assertSmsModeEnabled();
+      const { toTrpcClickSendError } = await import('./clicksend');
 
       try {
         const { getSmsCampaign } = await import('@bulk-messanger/clicksend');
@@ -746,10 +578,7 @@ export const appRouter = router({
   cancelClickSendCampaign: protectedProcedure
     .input(z.object({ smsCampaignId: z.number().int().positive() }))
     .mutation(async ({ input }) => {
-      const { assertSmsModeEnabled, toTrpcClickSendError } = await import(
-        './clicksend'
-      );
-      await assertSmsModeEnabled();
+      const { toTrpcClickSendError } = await import('./clicksend');
 
       try {
         const { cancelSmsCampaign } = await import('@bulk-messanger/clicksend');
@@ -780,11 +609,9 @@ export const appRouter = router({
     )
     .mutation(async ({ ctx, input }) => {
       const {
-        assertSmsModeEnabled,
         createClickSendListFromRecipients,
         toTrpcClickSendError,
       } = await import('./clicksend');
-      await assertSmsModeEnabled();
 
       try {
         const {
@@ -873,11 +700,9 @@ export const appRouter = router({
     )
     .mutation(async ({ ctx, input }) => {
       const {
-        assertSmsModeEnabled,
         createClickSendListFromRecipients,
         toTrpcClickSendError,
       } = await import('./clicksend');
-      await assertSmsModeEnabled();
 
       try {
         const {

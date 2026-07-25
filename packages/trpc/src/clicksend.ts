@@ -5,18 +5,6 @@ import {
   type ResolvedRecipient,
 } from './campaigns';
 
-export async function assertSmsModeEnabled() {
-  const { assertChannelEnabled } = await import('@bulk-messanger/env/features');
-  try {
-    assertChannelEnabled('SMS');
-  } catch (error) {
-    throw new TRPCError({
-      code: 'FORBIDDEN',
-      message: error instanceof Error ? error.message : 'SMS disabled',
-    });
-  }
-}
-
 export function toTrpcClickSendError(error: unknown): TRPCError {
   if (error instanceof ClickSendApiError) {
     if (error.status === 401) {

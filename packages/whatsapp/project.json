@@ -1,7 +1,0 @@
-{
-  "name": "whatsapp",
-  "$schema": "../../node_modules/nx/schemas/project-schema.json",
-  "sourceRoot": "packages/whatsapp/src",
-  "projectType": "library",
-  "tags": ["type:lib", "scope:shared"]
-}

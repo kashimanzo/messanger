@@ -5,7 +5,6 @@ import { getQueueRedisConnection, isRedisAvailable } from './redis';
 import { ensureWhatsAppWorker } from './worker';
 import { getConfiguredMessagesPerSecond } from './rate-limit';
 import type {
-  EnqueueTemplateCampaignInput,
   EnqueueTextCampaignInput,
   WhatsAppQueueJobData,
 } from './types';
@@ -56,11 +55,8 @@ async function filterOptedOutRecipients(
 async function enqueueCampaignMessages(
   campaignId: string,
   userId: string,
-  type: 'TEMPLATE' | 'TEXT',
   recipients: Array<{ phoneNumber: string; contactName?: string; optedOut: boolean }>,
   payload: {
-    channel?: WhatsAppQueueJobData['channel'];
-    template?: WhatsAppQueueJobData['template'];
     textBody?: string;
     from?: string;
   },
@@ -86,7 +82,6 @@ async function enqueueCampaignMessages(
 
   const skippedCount = recipients.filter((recipient) => recipient.optedOut).length;
   const jobs: WhatsAppQueueJobData[] = [];
-  const channel = payload.channel ?? 'WHATSAPP';
 
   for (const record of messageRecords) {
     if (record.status === 'SKIPPED_OPTOUT') {
@@ -98,9 +93,8 @@ async function enqueueCampaignMessages(
       campaignId,
       userId,
       phoneNumber: record.phoneNumber,
-      channel,
-      type,
-      template: payload.template,
+      channel: 'SMS',
+      type: 'TEXT',
       textBody: payload.textBody,
       from: payload.from,
     });
@@ -118,7 +112,7 @@ async function enqueueCampaignMessages(
     await ensureWhatsAppWorker();
   } else {
     console.warn(
-      '[whatsapp-queue] Redis unavailable — processing campaign inline in API process',
+      '[sms-queue] Redis unavailable — processing campaign inline in API process',
     );
     processCampaignInline(campaignId, jobs);
   }
@@ -138,50 +132,14 @@ async function enqueueCampaignMessages(
   return { pendingCount, skippedCount };
 }
 
-export async function enqueueTemplateCampaign(input: EnqueueTemplateCampaignInput) {
-  const recipients = await filterOptedOutRecipients(input.recipients);
-
-  const campaign = await prisma.messageCampaign.create({
-    data: {
-      userId: input.userId,
-      type: 'TEMPLATE',
-      channel: 'WHATSAPP',
-      status: 'QUEUED',
-      templateName: input.templateName,
-      templateLanguage: input.language,
-      variables: input.variables ?? [],
-      groupId: input.groupId,
-      groupName: input.groupName,
-      totalCount: recipients.length,
-      pendingCount: recipients.length,
-    },
-  });
-
-  await enqueueCampaignMessages(campaign.id, input.userId, 'TEMPLATE', recipients, {
-    channel: 'WHATSAPP',
-    template: {
-      name: input.templateName,
-      language: input.language,
-      variables: input.variables,
-    },
-  });
-
-  return serializeCampaign(
-    await prisma.messageCampaign.findUniqueOrThrow({
-      where: { id: campaign.id },
-    }),
-  );
-}
-
 export async function enqueueTextCampaign(input: EnqueueTextCampaignInput) {
   const recipients = await filterOptedOutRecipients(input.recipients);
-  const channel = input.channel ?? 'WHATSAPP';
 
   const campaign = await prisma.messageCampaign.create({
     data: {
       userId: input.userId,
       type: 'TEXT',
-      channel,
+      channel: 'SMS',
       status: 'QUEUED',
       textBody: input.textBody,
       totalCount: recipients.length,
@@ -189,8 +147,7 @@ export async function enqueueTextCampaign(input: EnqueueTextCampaignInput) {
     },
   });
 
-  await enqueueCampaignMessages(campaign.id, input.userId, 'TEXT', recipients, {
-    channel,
+  await enqueueCampaignMessages(campaign.id, input.userId, recipients, {
     textBody: input.textBody,
     from: input.from,
   });
@@ -281,7 +238,7 @@ export function serializeCampaign(campaign: {
   return {
     id: campaign.id,
     type: campaign.type,
-    channel: campaign.channel ?? 'WHATSAPP',
+    channel: campaign.channel ?? 'SMS',
     status: campaign.status,
     templateName: campaign.templateName,
     templateLanguage: campaign.templateLanguage,

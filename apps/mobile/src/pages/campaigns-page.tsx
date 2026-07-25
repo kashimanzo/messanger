@@ -18,7 +18,6 @@ import {
 } from '@mui/material';
 import { FiPlus } from 'react-icons/fi';
 import { MobileAppBar } from '../components/mobile-app-bar';
-import { useMessagingFeatures } from '../hooks/use-messaging-features';
 import { trpc } from '../lib/trpc';
 
 const statusColor = {
@@ -31,24 +30,11 @@ const statusColor = {
 
 function LocalCampaignsList() {
   const navigate = useNavigate();
-  const { whatsappEnabled, smsEnabled } = useMessagingFeatures();
   const { data: campaigns, isLoading, error } = trpc.listCampaigns.useQuery({
     limit: 50,
   });
 
-  const smsOnly = smsEnabled && !whatsappEnabled;
-  const whatsappOnly = whatsappEnabled && !smsEnabled;
-
-  const visibleCampaigns = useMemo(() => {
-    if (!campaigns) return [];
-
-    return campaigns.filter((campaign) => {
-      const channel = campaign.channel ?? 'WHATSAPP';
-      if (smsOnly) return channel === 'SMS';
-      if (whatsappOnly) return channel === 'WHATSAPP';
-      return true;
-    });
-  }, [campaigns, smsOnly, whatsappOnly]);
+  const visibleCampaigns = useMemo(() => campaigns ?? [], [campaigns]);
 
   if (isLoading) {
     return (
@@ -80,7 +66,7 @@ function LocalCampaignsList() {
                     {campaign.templateName ?? 'Text message'}
                   </Typography>
                   <Chip
-                    label={campaign.channel === 'SMS' ? 'SMS' : 'WhatsApp'}
+                    label="SMS"
                     size="small"
                     variant="outlined"
                   />
@@ -197,50 +183,33 @@ function ClickSendCampaignsList() {
 
 export function CampaignsPage() {
   const navigate = useNavigate();
-  const { smsEnabled, whatsappEnabled, isLoading: featuresLoading } =
-    useMessagingFeatures();
 
   return (
     <Box sx={{ minHeight: '100dvh', bgcolor: 'background.default' }}>
-      <MobileAppBar
-        title={smsEnabled ? 'SMS campaigns' : 'Sent campaigns'}
-        onBack={() => navigate('/home')}
-      />
+      <MobileAppBar title="SMS campaigns" onBack={() => navigate('/home')} />
 
       <Container maxWidth="sm" sx={{ py: 3, pb: 12 }}>
-        {featuresLoading ? (
-          <Box sx={{ display: 'flex', justifyContent: 'center', py: 6 }}>
-            <CircularProgress />
-          </Box>
-        ) : smsEnabled ? (
-          <Stack spacing={3}>
-            <ClickSendCampaignsList />
-            <Typography variant="subtitle2" color="text.secondary">
-              Local queue history
-            </Typography>
-            <LocalCampaignsList />
-          </Stack>
-        ) : whatsappEnabled ? (
+        <Stack spacing={3}>
+          <ClickSendCampaignsList />
+          <Typography variant="subtitle2" color="text.secondary">
+            Local queue history
+          </Typography>
           <LocalCampaignsList />
-        ) : (
-          <Alert severity="info">No messaging channels are enabled.</Alert>
-        )}
+        </Stack>
       </Container>
 
-      {smsEnabled && (
-        <Fab
-          color="primary"
-          aria-label="new campaign"
-          onClick={() => navigate('/campaigns/clicksend/new')}
-          sx={{
-            position: 'fixed',
-            bottom: 'calc(24px + env(safe-area-inset-bottom))',
-            right: 'calc(24px + env(safe-area-inset-right))',
-          }}
-        >
-          <FiPlus size={24} />
-        </Fab>
-      )}
+      <Fab
+        color="primary"
+        aria-label="new campaign"
+        onClick={() => navigate('/campaigns/clicksend/new')}
+        sx={{
+          position: 'fixed',
+          bottom: 'calc(24px + env(safe-area-inset-bottom))',
+          right: 'calc(24px + env(safe-area-inset-right))',
+        }}
+      >
+        <FiPlus size={24} />
+      </Fab>
     </Box>
   );
 }

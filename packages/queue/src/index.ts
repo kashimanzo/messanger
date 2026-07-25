@@ -1,5 +1,4 @@
 export {
-  enqueueTemplateCampaign,
   enqueueTextCampaign,
   getWhatsAppQueue,
   refreshCampaignStatus,
@@ -13,7 +12,6 @@ export {
 } from './rate-limit';
 export type {
   CampaignRecipient,
-  EnqueueTemplateCampaignInput,
   EnqueueTextCampaignInput,
   MessagingChannel,
   WhatsAppQueueJobData,

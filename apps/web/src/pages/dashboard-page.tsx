@@ -1,7 +1,6 @@
-import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { format } from 'date-fns';
-import { FiLogOut, FiSend } from 'react-icons/fi';
+import { FiLogOut } from 'react-icons/fi';
 import { Button, Card, CardContent, CardHeader, CardTitle } from '@bulk-messanger/ui';
 import { authClient } from '../lib/auth';
 import { trpc } from '../lib/trpc';
@@ -15,23 +14,6 @@ export function DashboardPage() {
     retry: false,
   });
   const { data: health } = trpc.health.useQuery();
-  const sendTestCampaign = trpc.sendTestWhatsAppCampaign.useMutation();
-  const [campaignMessage, setCampaignMessage] = useState<string | null>(null);
-
-  const handleSendTestWhatsApp = async () => {
-    setCampaignMessage(null);
-
-    try {
-      const result = await sendTestCampaign.mutateAsync();
-      setCampaignMessage(
-        `Sent ${result.successCount}/${result.total} messages using template "${result.templateName}".`,
-      );
-    } catch (error) {
-      setCampaignMessage(
-        error instanceof Error ? error.message : 'Failed to send test campaign.',
-      );
-    }
-  };
 
   const handleSignOut = async () => {
     await authClient.signOut();
@@ -72,44 +54,6 @@ export function DashboardPage() {
                 {format(new Date(profile.createdAt), 'PPP')}
               </p>
             )}
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>WhatsApp test</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3 text-sm">
-            <p className="text-slate-600">
-              Sends your approved template to the 3 test numbers from send.js.
-            </p>
-            <Button
-              onClick={handleSendTestWhatsApp}
-              disabled={sendTestCampaign.isPending}
-            >
-              <FiSend />
-              {sendTestCampaign.isPending
-                ? 'Sending...'
-                : 'Send test WhatsApp campaign'}
-            </Button>
-            {campaignMessage && (
-              <p
-                className={
-                  campaignMessage.includes('Failed') ||
-                  sendTestCampaign.isError
-                    ? 'text-red-600'
-                    : 'text-green-700'
-                }
-              >
-                {campaignMessage}
-              </p>
-            )}
-            {sendTestCampaign.data?.results.map((result) => (
-              <p key={result.to} className="text-slate-600">
-                {result.success ? '✅' : '❌'} {result.to}
-                {result.error ? ` — ${result.error}` : ''}
-              </p>
-            ))}
           </CardContent>
         </Card>
 

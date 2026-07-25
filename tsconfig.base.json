@@ -26,7 +26,6 @@
       "@bulk-messanger/trpc/server": ["packages/trpc/src/server.ts"],
       "@bulk-messanger/trpc/links": ["packages/trpc/src/links.ts"],
       "@bulk-messanger/ui": ["packages/ui/src/index.ts"],
-      "@bulk-messanger/whatsapp": ["packages/whatsapp/src/index.ts"],
       "@bulk-messanger/clicksend": ["packages/clicksend/src/index.ts"],
       "@bulk-messanger/queue": ["packages/queue/src/index.ts"],
       "@bulk-messanger/queue/worker": ["packages/queue/src/worker.ts"]

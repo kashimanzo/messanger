@@ -4,7 +4,6 @@ import { AddContactPage } from '../pages/add-contact-page';
 import { CampaignDetailPage } from '../pages/campaign-detail-page';
 import { CampaignsPage } from '../pages/campaigns-page';
 import { ClickSendCampaignDetailPage } from '../pages/clicksend-campaign-detail-page';
-import { ComposeMessagePage } from '../pages/compose-message-page';
 import { EditContactPage } from '../pages/edit-contact-page';
 import { GroupFormPage } from '../pages/group-form-page';
 import { GroupsPage } from '../pages/groups-page';
@@ -15,8 +14,6 @@ import { PhonebookPage } from '../pages/phonebook-page';
 import { RegisterPage } from '../pages/register-page';
 import { CheckClickSendCampaignPricePage } from '../pages/check-clicksend-campaign-price-page';
 import { SendClickSendCampaignPage } from '../pages/send-clicksend-campaign-page';
-import { SendCustomMessagePage } from '../pages/send-custom-message-page';
-import { SendTemplatePage } from '../pages/send-template-page';
 import { SmsTemplateFormPage } from '../pages/sms-template-form-page';
 import { TemplatesPage } from '../pages/templates-page';
 
@@ -31,14 +28,6 @@ export function App() {
         element={
           <ProtectedRoute>
             <HomePage />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/compose"
-        element={
-          <ProtectedRoute>
-            <ComposeMessagePage />
           </ProtectedRoute>
         }
       />
@@ -79,22 +68,6 @@ export function App() {
         element={
           <ProtectedRoute>
             <TemplatesPage />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/templates/send"
-        element={
-          <ProtectedRoute>
-            <SendTemplatePage />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/templates/custom"
-        element={
-          <ProtectedRoute>
-            <SendCustomMessagePage />
           </ProtectedRoute>
         }
       />

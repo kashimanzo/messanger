@@ -34,25 +34,13 @@ export async function recoverStalledCampaign(campaignId: string) {
   recoveringCampaigns.add(campaignId);
 
   try {
-    const variables = (campaign.variables ?? []) as NonNullable<
-      WhatsAppQueueJobData['template']
-    >['variables'];
-
     const jobs: WhatsAppQueueJobData[] = pendingMessages.map((message) => ({
       campaignMessageId: message.id,
       campaignId,
       userId: campaign.userId,
       phoneNumber: message.phoneNumber,
-      channel: campaign.channel ?? 'WHATSAPP',
-      type: campaign.type,
-      template:
-        campaign.type === 'TEMPLATE' && campaign.templateName
-          ? {
-              name: campaign.templateName,
-              language: campaign.templateLanguage ?? 'en_US',
-              variables,
-            }
-          : undefined,
+      channel: 'SMS',
+      type: 'TEXT',
       textBody: campaign.textBody ?? undefined,
     }));
 
@@ -72,10 +60,10 @@ export async function recoverStalledCampaign(campaignId: string) {
       }
 
       await ensureWhatsAppWorker();
-      console.info(`[whatsapp-queue] recovered ${jobs.length} stalled jobs for ${campaignId}`);
+      console.info(`[sms-queue] recovered ${jobs.length} stalled jobs for ${campaignId}`);
     } else {
       processCampaignInline(campaignId, jobs);
-      console.info(`[whatsapp-inline] recovered ${jobs.length} stalled jobs for ${campaignId}`);
+      console.info(`[sms-inline] recovered ${jobs.length} stalled jobs for ${campaignId}`);
     }
   } finally {
     recoveringCampaigns.delete(campaignId);

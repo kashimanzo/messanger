@@ -1,5 +1,4 @@
 import { prisma } from '@bulk-messanger/database';
-import { sendTemplateMessage, sendTextMessage } from '@bulk-messanger/whatsapp';
 import { sendSmsMessage } from '@bulk-messanger/clicksend';
 import {
   getConfiguredMessagesPerSecond,
@@ -27,39 +26,12 @@ export async function processWhatsAppJobData(
     },
   });
 
-  const channel = data.channel ?? 'WHATSAPP';
+  const response = await sendSmsMessage(data.phoneNumber, data.textBody ?? '', {
+    from: data.from,
+  });
+  const result = response.result;
 
-  let result: {
-    success: boolean;
-    messageId?: string;
-    error?: string;
-    rateLimited?: boolean;
-    retryAfterMs?: number;
-  };
-  let rateLimit: { retryAfterMs?: number; remaining?: number } | undefined;
-
-  if (channel === 'SMS') {
-    const response = await sendSmsMessage(data.phoneNumber, data.textBody ?? '', {
-      from: data.from,
-    });
-    result = response.result;
-  } else if (data.type === 'TEMPLATE' && data.template) {
-    const response = await sendTemplateMessage(data.phoneNumber, data.template);
-    result = response.result;
-    rateLimit = response.rateLimit;
-  } else {
-    const response = await sendTextMessage(data.phoneNumber, data.textBody ?? '');
-    result = response.result;
-    rateLimit = response.rateLimit;
-  }
-
-  if (rateLimit?.retryAfterMs) {
-    dynamicDelayMs = Math.max(dynamicDelayMs, rateLimit.retryAfterMs);
-  } else if (rateLimit?.remaining !== undefined && rateLimit.remaining <= 2) {
-    dynamicDelayMs = getDefaultDelayMs() * 2;
-  } else {
-    dynamicDelayMs = getDefaultDelayMs();
-  }
+  dynamicDelayMs = getDefaultDelayMs();
 
   if (result.rateLimited || isRateLimitError(result.error)) {
     if (attempt < 3) {
@@ -72,9 +44,7 @@ export async function processWhatsAppJobData(
       where: { id: data.campaignMessageId },
       data: {
         status: 'FAILED',
-        error:
-          result.error ??
-          `Rate limited by ${channel === 'SMS' ? 'ClickSend' : 'WhatsApp'}`,
+        error: result.error ?? 'Rate limited by ClickSend',
       },
     });
     await refreshCampaignStatus(data.campaignId);
@@ -97,7 +67,6 @@ export async function processWhatsAppJobData(
     where: { id: data.campaignMessageId },
     data: {
       status: 'SENT',
-      whatsappMessageId: channel === 'WHATSAPP' ? result.messageId : undefined,
       providerMessageId: result.messageId,
       error: null,
       sentAt: new Date(),

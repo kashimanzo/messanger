@@ -1,6 +1,4 @@
-import type { TemplateSendOptions } from '@bulk-messanger/whatsapp';
-
-export type MessagingChannel = 'WHATSAPP' | 'SMS';
+export type MessagingChannel = 'SMS';
 
 export type WhatsAppQueueJobData = {
   campaignMessageId: string;
@@ -8,10 +6,9 @@ export type WhatsAppQueueJobData = {
   userId: string;
   phoneNumber: string;
   channel: MessagingChannel;
-  type: 'TEMPLATE' | 'TEXT';
-  template?: TemplateSendOptions;
+  type: 'TEXT';
   textBody?: string;
-  /** Optional ClickSend sender override for SMS channel. */
+  /** Optional ClickSend sender override. */
   from?: string;
 };
 
@@ -20,21 +17,11 @@ export type CampaignRecipient = {
   contactName?: string;
 };
 
-export type EnqueueTemplateCampaignInput = {
-  userId: string;
-  templateName: string;
-  language: string;
-  variables?: TemplateSendOptions['variables'];
-  groupId?: string;
-  groupName?: string;
-  recipients: CampaignRecipient[];
-};
-
 export type EnqueueTextCampaignInput = {
   userId: string;
   textBody: string;
   channel?: MessagingChannel;
-  /** Optional ClickSend sender override for SMS channel. */
+  /** Optional ClickSend sender override. */
   from?: string;
   recipients: CampaignRecipient[];
 };
