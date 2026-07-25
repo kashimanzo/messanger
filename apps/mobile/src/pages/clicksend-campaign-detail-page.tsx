@@ -13,7 +13,9 @@ import {
   Typography,
 } from '@mui/material';
 import { MobileAppBar } from '../components/mobile-app-bar';
+import { useFeedback } from '../components/feedback-provider';
 import { useMessagingFeatures } from '../hooks/use-messaging-features';
+import { getErrorMessage } from '../lib/get-error-message';
 import { trpc } from '../lib/trpc';
 
 const cancellableStatuses = new Set([
@@ -27,6 +29,7 @@ const cancellableStatuses = new Set([
 export function ClickSendCampaignDetailPage() {
   const navigate = useNavigate();
   const { id } = useParams();
+  const { showError, showSuccess } = useFeedback();
   const smsCampaignId = Number(id);
   const { smsEnabled, isLoading: featuresLoading } = useMessagingFeatures();
   const utils = trpc.useUtils();
@@ -40,6 +43,10 @@ export function ClickSendCampaignDetailPage() {
     onSuccess: async () => {
       await utils.getClickSendCampaign.invalidate({ smsCampaignId });
       await utils.listClickSendCampaigns.invalidate();
+      showSuccess('Campaign cancelled.');
+    },
+    onError: (mutationError) => {
+      showError(getErrorMessage(mutationError, 'Failed to cancel campaign.'));
     },
   });
 

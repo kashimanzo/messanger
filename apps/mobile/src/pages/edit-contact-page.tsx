@@ -9,12 +9,15 @@ import {
   Stack,
 } from '@mui/material';
 import { ContactForm, type ContactFormValues } from '../components/contact-form';
+import { useFeedback } from '../components/feedback-provider';
 import { MobileAppBar } from '../components/mobile-app-bar';
+import { getErrorMessage } from '../lib/get-error-message';
 import { trpc } from '../lib/trpc';
 import { useContactsStore } from '../stores/contacts-store';
 
 export function EditContactPage() {
   const navigate = useNavigate();
+  const { showError } = useFeedback();
   const { id = '' } = useParams();
   const utils = trpc.useUtils();
   const upsertContact = useContactsStore((state) => state.upsertContact);
@@ -43,9 +46,9 @@ export function EditContactPage() {
       await utils.getContactStats.invalidate();
       navigate('/phonebook');
     } catch (error) {
-      setErrorMessage(
-        error instanceof Error ? error.message : 'Failed to update contact.',
-      );
+      const message = getErrorMessage(error, 'Failed to update contact.');
+      setErrorMessage(message);
+      showError(message);
     }
   };
 
@@ -58,9 +61,9 @@ export function EditContactPage() {
       await utils.getContactStats.invalidate();
       navigate('/phonebook');
     } catch (error) {
-      setErrorMessage(
-        error instanceof Error ? error.message : 'Failed to delete contact.',
-      );
+      const message = getErrorMessage(error, 'Failed to delete contact.');
+      setErrorMessage(message);
+      showError(message);
     }
   };
 

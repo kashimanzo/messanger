@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-  Alert,
   Box,
   Button,
   CircularProgress,
@@ -16,30 +15,34 @@ import {
   Typography,
 } from '@mui/material';
 import { FiPlus, FiTrash2 } from 'react-icons/fi';
+import { useFeedback } from '../components/feedback-provider';
 import { MobileAppBar } from '../components/mobile-app-bar';
 import { TEST_RECIPIENTS } from '@bulk-messanger/whatsapp';
+import { getErrorMessage } from '../lib/get-error-message';
 import { isValidPhoneNumber, normalizePhoneNumber } from '../lib/phone-numbers';
 import { trpc } from '../lib/trpc';
 
 export function ComposeMessagePage() {
   const navigate = useNavigate();
+  const { showError } = useFeedback();
   const sendMessage = trpc.sendWhatsAppMessage.useMutation();
   const [message, setMessage] = useState('');
   const [recipients, setRecipients] = useState<string[]>([...TEST_RECIPIENTS]);
   const [newNumber, setNewNumber] = useState('');
   const [numberError, setNumberError] = useState<string | null>(null);
-  const [statusMessage, setStatusMessage] = useState<string | null>(null);
 
   const handleAddNumber = () => {
     const normalized = normalizePhoneNumber(newNumber);
 
     if (!isValidPhoneNumber(newNumber)) {
       setNumberError('Enter a valid number (10–15 digits, E.164 without +).');
+      showError('Enter a valid number (10–15 digits, E.164 without +).');
       return;
     }
 
     if (recipients.includes(normalized)) {
       setNumberError('This number is already in the list.');
+      showError('This number is already in the list.');
       return;
     }
 
@@ -53,15 +56,13 @@ export function ComposeMessagePage() {
   };
 
   const handleSend = async () => {
-    setStatusMessage(null);
-
     if (!message.trim()) {
-      setStatusMessage('Write a message before sending.');
+      showError('Write a message before sending.');
       return;
     }
 
     if (recipients.length === 0) {
-      setStatusMessage('Add at least one recipient.');
+      showError('Add at least one recipient.');
       return;
     }
 
@@ -73,9 +74,7 @@ export function ComposeMessagePage() {
 
       navigate(`/campaigns/${result.id}`);
     } catch (error) {
-      setStatusMessage(
-        error instanceof Error ? error.message : 'Failed to send messages.',
-      );
+      showError(getErrorMessage(error, 'Failed to send messages.'));
     }
   };
 
@@ -171,18 +170,6 @@ export function ComposeMessagePage() {
               `Send to ${recipients.length} recipient${recipients.length === 1 ? '' : 's'}`
             )}
           </Button>
-
-          {statusMessage && (
-            <Alert
-              severity={
-                sendMessage.isError || statusMessage.includes('Failed') || statusMessage.includes('before')
-                  ? 'error'
-                  : 'success'
-              }
-            >
-              {statusMessage}
-            </Alert>
-          )}
 
           {sendMessage.data?.results.map((result) => (
             <Typography key={result.to} variant="caption" display="block">

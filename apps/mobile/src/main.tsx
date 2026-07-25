@@ -5,6 +5,7 @@ import { BrowserRouter } from 'react-router-dom';
 import { CssBaseline, ThemeProvider } from '@mui/material';
 import * as ReactDOM from 'react-dom/client';
 import App from './app/app';
+import { FeedbackProvider } from './components/feedback-provider';
 import { TRPCProvider } from './lib/trpc-provider';
 import { theme } from './theme/theme';
 import './styles.css';
@@ -22,11 +23,13 @@ root.render(
   <StrictMode>
     <ThemeProvider theme={theme}>
       <CssBaseline />
-      <TRPCProvider>
-        <BrowserRouter>
-          <App />
-        </BrowserRouter>
-      </TRPCProvider>
+      <FeedbackProvider>
+        <TRPCProvider>
+          <BrowserRouter>
+            <App />
+          </BrowserRouter>
+        </TRPCProvider>
+      </FeedbackProvider>
     </ThemeProvider>
   </StrictMode>,
 );

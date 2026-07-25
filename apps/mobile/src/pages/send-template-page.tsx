@@ -21,9 +21,11 @@ import {
   ContactPicker,
   SelectAllContactsControl,
 } from '../components/contact-picker';
+import { useFeedback } from '../components/feedback-provider';
 import { MobileAppBar } from '../components/mobile-app-bar';
 import { useContacts } from '../hooks/use-contacts';
 import { useMessagingFeatures } from '../hooks/use-messaging-features';
+import { getErrorMessage } from '../lib/get-error-message';
 import { trpc } from '../lib/trpc';
 
 type TemplateState = {
@@ -43,6 +45,7 @@ type TemplateState = {
 export function SendTemplatePage() {
   const navigate = useNavigate();
   const location = useLocation();
+  const { showError } = useFeedback();
   const templateState = location.state as TemplateState | null;
   const template = templateState?.template;
   const { whatsappEnabled, smsEnabled, isLoading: featuresLoading } =
@@ -55,7 +58,6 @@ export function SendTemplatePage() {
   const [groupId, setGroupId] = useState('');
   const [selectedContactIds, setSelectedContactIds] = useState<Set<string>>(new Set());
   const [variableValues, setVariableValues] = useState<Record<string, string>>({});
-  const [statusMessage, setStatusMessage] = useState<string | null>(null);
 
   const variableFields = useMemo(() => template?.variables ?? [], [template]);
 
@@ -110,10 +112,8 @@ export function SendTemplatePage() {
       return;
     }
 
-    setStatusMessage(null);
-
     if (!groupId && selectedContactIds.size === 0) {
-      setStatusMessage('Select a group or at least one contact.');
+      showError('Select a group or at least one contact.');
       return;
     }
 
@@ -123,7 +123,7 @@ export function SendTemplatePage() {
     });
 
     if (missingVariable) {
-      setStatusMessage(`Fill in ${missingVariable.label}.`);
+      showError(`Fill in ${missingVariable.label}.`);
       return;
     }
 
@@ -142,9 +142,7 @@ export function SendTemplatePage() {
 
       navigate(`/campaigns/${result.id}`);
     } catch (error) {
-      setStatusMessage(
-        error instanceof Error ? error.message : 'Failed to send template campaign.',
-      );
+      showError(getErrorMessage(error, 'Failed to send template campaign.'));
     }
   };
 
@@ -265,21 +263,6 @@ export function SendTemplatePage() {
               onToggle={toggleContact}
             />
           </Box>
-
-          {statusMessage && (
-            <Alert
-              severity={
-                sendCampaign.isError ||
-                statusMessage.includes('Failed') ||
-                statusMessage.includes('Select') ||
-                statusMessage.includes('Fill')
-                  ? 'error'
-                  : 'success'
-              }
-            >
-              {statusMessage}
-            </Alert>
-          )}
         </Stack>
       </Container>
 

@@ -22,8 +22,10 @@ const config: CapacitorConfig = {
     CapacitorCookies: {
       enabled: true,
     },
+    // Patch fetch/XHR to native HTTP so API errors aren't masked as WebView
+    // "Load failed" CORS failures on iOS/Android.
     CapacitorHttp: {
-      enabled: false,
+      enabled: true,
     },
   },
 };

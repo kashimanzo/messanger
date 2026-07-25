@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo } from 'react';
+import { getErrorMessage } from '../lib/get-error-message';
 import { trpc } from '../lib/trpc';
 import { useContactsStore } from '../stores/contacts-store';
 
@@ -45,8 +46,7 @@ export function useContacts(search?: string) {
       setHasFetched(true);
       return data;
     } catch (fetchError) {
-      const message =
-        fetchError instanceof Error ? fetchError.message : 'Failed to load contacts';
+      const message = getErrorMessage(fetchError, 'Failed to load contacts');
       setError(message);
       throw fetchError;
     } finally {

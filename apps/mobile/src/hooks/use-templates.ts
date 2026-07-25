@@ -1,4 +1,5 @@
 import { useCallback, useEffect } from 'react';
+import { getErrorMessage } from '../lib/get-error-message';
 import { trpc } from '../lib/trpc';
 import { useTemplatesStore } from '../stores/templates-store';
 
@@ -32,8 +33,7 @@ export function useTemplates(options?: { enabled?: boolean }) {
       setHasFetched(true);
       return data;
     } catch (fetchError) {
-      const message =
-        fetchError instanceof Error ? fetchError.message : 'Failed to load templates';
+      const message = getErrorMessage(fetchError, 'Failed to load templates');
       setError(message);
       throw fetchError;
     } finally {

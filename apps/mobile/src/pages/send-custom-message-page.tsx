@@ -22,15 +22,18 @@ import {
   ContactPicker,
   SelectAllContactsControl,
 } from '../components/contact-picker';
+import { useFeedback } from '../components/feedback-provider';
 import { MobileAppBar } from '../components/mobile-app-bar';
 import { useContacts } from '../hooks/use-contacts';
 import { useMessagingFeatures } from '../hooks/use-messaging-features';
+import { getErrorMessage } from '../lib/get-error-message';
 import { trpc } from '../lib/trpc';
 
 type Channel = 'WHATSAPP' | 'SMS';
 
 export function SendCustomMessagePage() {
   const navigate = useNavigate();
+  const { showError } = useFeedback();
   const { whatsappEnabled, smsEnabled, defaultChannel } = useMessagingFeatures();
   const { data: groups } = trpc.listContactGroups.useQuery();
   const { allContacts: contacts } = useContacts();
@@ -50,7 +53,6 @@ export function SendCustomMessagePage() {
   const [message, setMessage] = useState('');
   const [groupId, setGroupId] = useState('');
   const [selectedContactIds, setSelectedContactIds] = useState<Set<string>>(new Set());
-  const [statusMessage, setStatusMessage] = useState<string | null>(null);
 
   useEffect(() => {
     if (availableChannels.length === 0) {
@@ -101,15 +103,13 @@ export function SendCustomMessagePage() {
   };
 
   const handleSend = async () => {
-    setStatusMessage(null);
-
     if (!message.trim()) {
-      setStatusMessage('Write a message before sending.');
+      showError('Write a message before sending.');
       return;
     }
 
     if (!groupId && selectedContactIds.size === 0) {
-      setStatusMessage('Select a group or at least one contact.');
+      showError('Select a group or at least one contact.');
       return;
     }
 
@@ -126,9 +126,7 @@ export function SendCustomMessagePage() {
 
       navigate(`/campaigns/${result.id}`);
     } catch (error) {
-      setStatusMessage(
-        error instanceof Error ? error.message : 'Failed to send messages.',
-      );
+      showError(getErrorMessage(error, 'Failed to send messages.'));
     }
   };
 
@@ -250,22 +248,6 @@ export function SendCustomMessagePage() {
 
             <ContactPicker selectedIds={selectedContactIds} onToggle={toggleContact} />
           </Box>
-
-          {statusMessage && (
-            <Alert
-              severity={
-                sendMessage.isError ||
-                sendSms.isError ||
-                statusMessage.includes('Failed') ||
-                statusMessage.includes('Select') ||
-                statusMessage.includes('Write')
-                  ? 'error'
-                  : 'success'
-              }
-            >
-              {statusMessage}
-            </Alert>
-          )}
         </Stack>
       </Container>
 

@@ -25,13 +25,16 @@ import {
   Typography,
 } from '@mui/material';
 import { FiDownload, FiPlus, FiSearch, FiTrash2 } from 'react-icons/fi';
+import { useFeedback } from '../components/feedback-provider';
 import { MobileAppBar } from '../components/mobile-app-bar';
 import { useContacts } from '../hooks/use-contacts';
+import { getErrorMessage } from '../lib/get-error-message';
 import { trpc } from '../lib/trpc';
 import { useContactsStore } from '../stores/contacts-store';
 
 export function PhonebookPage() {
   const navigate = useNavigate();
+  const { showError, showSuccess } = useFeedback();
   const [search, setSearch] = useState('');
   const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
   const utils = trpc.useUtils();
@@ -42,6 +45,10 @@ export function PhonebookPage() {
       removeContact(variables.id);
       await utils.getContactStats.invalidate();
       setDeleteTargetId(null);
+      showSuccess('Contact deleted.');
+    },
+    onError: (mutationError) => {
+      showError(getErrorMessage(mutationError, 'Failed to delete contact.'));
     },
   });
 
@@ -58,7 +65,11 @@ export function PhonebookPage() {
       return;
     }
 
-    await deleteContact.mutateAsync({ id: deleteTargetId });
+    try {
+      await deleteContact.mutateAsync({ id: deleteTargetId });
+    } catch {
+      // onError already surfaces the message
+    }
   };
 
   return (

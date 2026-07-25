@@ -19,6 +19,7 @@ import {
   Typography,
 } from '@mui/material';
 import { FiSearch } from 'react-icons/fi';
+import { useFeedback } from '../components/feedback-provider';
 import { MobileAppBar } from '../components/mobile-app-bar';
 import { useContacts } from '../hooks/use-contacts';
 import {
@@ -26,10 +27,12 @@ import {
   loadDeviceContacts,
   type DeviceContact,
 } from '../lib/device-contacts';
+import { getErrorMessage } from '../lib/get-error-message';
 import { trpc } from '../lib/trpc';
 
 export function ImportContactsPage() {
   const navigate = useNavigate();
+  const { showError, showSuccess } = useFeedback();
   const utils = trpc.useUtils();
   const { refresh: refreshContacts } = useContacts();
   const importContacts = trpc.importContacts.useMutation();
@@ -38,7 +41,6 @@ export function ImportContactsPage() {
   const [search, setSearch] = useState('');
   const [isLoadingDevice, setIsLoadingDevice] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
-  const [statusMessage, setStatusMessage] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -62,9 +64,12 @@ export function ImportContactsPage() {
         }
       } catch (error) {
         if (!cancelled) {
-          setLoadError(
-            error instanceof Error ? error.message : 'Failed to load device contacts.',
+          const message = getErrorMessage(
+            error,
+            'Failed to load device contacts.',
           );
+          setLoadError(message);
+          showError(message);
         }
       } finally {
         if (!cancelled) {
@@ -131,14 +136,12 @@ export function ImportContactsPage() {
   };
 
   const handleImport = async () => {
-    setStatusMessage(null);
-
     const selectedContacts = deviceContacts.filter((contact) =>
       selectedIds.has(contact.deviceContactId),
     );
 
     if (selectedContacts.length === 0) {
-      setStatusMessage('Select at least one contact to import.');
+      showError('Select at least one contact to import.');
       return;
     }
 
@@ -156,7 +159,7 @@ export function ImportContactsPage() {
       await refreshContacts();
       await utils.getContactStats.invalidate();
 
-      setStatusMessage(
+      showSuccess(
         `Imported ${result.imported} contact${result.imported === 1 ? '' : 's'}. Skipped ${result.skipped} duplicate${result.skipped === 1 ? '' : 's'}.`,
       );
 
@@ -164,9 +167,7 @@ export function ImportContactsPage() {
         navigate('/phonebook');
       }
     } catch (error) {
-      setStatusMessage(
-        error instanceof Error ? error.message : 'Failed to import contacts.',
-      );
+      showError(getErrorMessage(error, 'Failed to import contacts.'));
     }
   };
 
@@ -183,17 +184,6 @@ export function ImportContactsPage() {
           )}
 
           {loadError && <Alert severity="error">{loadError}</Alert>}
-          {statusMessage && (
-            <Alert
-              severity={
-                statusMessage.includes('Failed') || statusMessage.includes('Select')
-                  ? 'error'
-                  : 'success'
-              }
-            >
-              {statusMessage}
-            </Alert>
-          )}
 
           {!isLoadingDevice && !loadError && (
             <>

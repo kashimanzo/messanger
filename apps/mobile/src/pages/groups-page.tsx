@@ -21,17 +21,24 @@ import {
   Typography,
 } from '@mui/material';
 import { FiPlus, FiTrash2 } from 'react-icons/fi';
+import { useFeedback } from '../components/feedback-provider';
 import { MobileAppBar } from '../components/mobile-app-bar';
+import { getErrorMessage } from '../lib/get-error-message';
 import { trpc } from '../lib/trpc';
 
 export function GroupsPage() {
   const navigate = useNavigate();
+  const { showError, showSuccess } = useFeedback();
   const utils = trpc.useUtils();
   const { data: groups, isLoading, error } = trpc.listContactGroups.useQuery();
   const deleteGroup = trpc.deleteContactGroup.useMutation({
     onSuccess: async () => {
       await utils.listContactGroups.invalidate();
       setDeleteTargetId(null);
+      showSuccess('Group deleted.');
+    },
+    onError: (mutationError) => {
+      showError(getErrorMessage(mutationError, 'Failed to delete group.'));
     },
   });
   const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
@@ -41,7 +48,11 @@ export function GroupsPage() {
       return;
     }
 
-    await deleteGroup.mutateAsync({ id: deleteTargetId });
+    try {
+      await deleteGroup.mutateAsync({ id: deleteTargetId });
+    } catch {
+      // onError already surfaces the message
+    }
   };
 
   return (

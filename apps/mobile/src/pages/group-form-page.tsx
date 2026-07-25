@@ -14,12 +14,15 @@ import {
   ContactPicker,
   SelectAllContactsControl,
 } from '../components/contact-picker';
+import { useFeedback } from '../components/feedback-provider';
 import { MobileAppBar } from '../components/mobile-app-bar';
 import { useContacts } from '../hooks/use-contacts';
+import { getErrorMessage } from '../lib/get-error-message';
 import { trpc } from '../lib/trpc';
 
 export function GroupFormPage() {
   const navigate = useNavigate();
+  const { showError } = useFeedback();
   const { id } = useParams();
   const isEditing = Boolean(id);
   const utils = trpc.useUtils();
@@ -61,12 +64,16 @@ export function GroupFormPage() {
     setErrorMessage(null);
 
     if (!name.trim()) {
-      setErrorMessage('Enter a group name.');
+      const message = 'Enter a group name.';
+      setErrorMessage(message);
+      showError(message);
       return;
     }
 
     if (selectedContactIds.size === 0) {
-      setErrorMessage('Select at least one contact for this group.');
+      const message = 'Select at least one contact for this group.';
+      setErrorMessage(message);
+      showError(message);
       return;
     }
 
@@ -85,9 +92,9 @@ export function GroupFormPage() {
       await utils.listContactGroups.invalidate();
       navigate('/groups');
     } catch (error) {
-      setErrorMessage(
-        error instanceof Error ? error.message : 'Failed to save group.',
-      );
+      const message = getErrorMessage(error, 'Failed to save group.');
+      setErrorMessage(message);
+      showError(message);
     }
   };
 

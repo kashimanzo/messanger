@@ -21,13 +21,16 @@ import {
   ContactPicker,
   SelectAllContactsControl,
 } from '../components/contact-picker';
+import { useFeedback } from '../components/feedback-provider';
 import { MobileAppBar } from '../components/mobile-app-bar';
 import { useContacts } from '../hooks/use-contacts';
 import { useMessagingFeatures } from '../hooks/use-messaging-features';
+import { getErrorMessage } from '../lib/get-error-message';
 import { trpc } from '../lib/trpc';
 
 export function SendClickSendCampaignPage() {
   const navigate = useNavigate();
+  const { showError, showSuccess } = useFeedback();
   const {
     smsEnabled,
     clickSendFrom,
@@ -56,7 +59,6 @@ export function SendClickSendCampaignPage() {
     listId?: number;
     mode: 'local' | 'clicksend';
   } | null>(null);
-  const [statusMessage, setStatusMessage] = useState<string | null>(null);
 
   useEffect(() => {
     if (clickSendFrom && !from) {
@@ -139,21 +141,20 @@ export function SendClickSendCampaignPage() {
   };
 
   const handlePrice = async () => {
-    setStatusMessage(null);
     setPricePreview(null);
 
     if (!from.trim()) {
-      setStatusMessage(
+      showError(
         'Enter a sender (e.g. BulkMsg or +4477...) or set CLICKSEND_FROM on the API.',
       );
       return;
     }
     if (!message.trim()) {
-      setStatusMessage('Write a message before calculating price.');
+      showError('Write a message before calculating price.');
       return;
     }
     if (!groupId && selectedContactIds.size === 0) {
-      setStatusMessage('Select a group or at least one contact.');
+      showError('Select a group or at least one contact.');
       return;
     }
 
@@ -166,26 +167,23 @@ export function SendClickSendCampaignPage() {
         listId: result.listId ?? undefined,
         mode: result.mode,
       });
+      showSuccess('Price calculated.');
     } catch (error) {
-      setStatusMessage(
-        error instanceof Error ? error.message : 'Failed to calculate price.',
-      );
+      showError(getErrorMessage(error, 'Failed to calculate price.'));
     }
   };
 
   const handleSend = async () => {
-    setStatusMessage(null);
-
     if (!from.trim()) {
-      setStatusMessage('Enter a sender before sending.');
+      showError('Enter a sender before sending.');
       return;
     }
     if (!message.trim()) {
-      setStatusMessage('Write a message before sending.');
+      showError('Write a message before sending.');
       return;
     }
     if (!groupId && selectedContactIds.size === 0) {
-      setStatusMessage('Select a group or at least one contact.');
+      showError('Select a group or at least one contact.');
       return;
     }
 
@@ -197,9 +195,7 @@ export function SendClickSendCampaignPage() {
       });
       navigateAfterSend(result);
     } catch (error) {
-      setStatusMessage(
-        error instanceof Error ? error.message : 'Failed to send campaign.',
-      );
+      showError(getErrorMessage(error, 'Failed to send campaign.'));
     }
   };
 
@@ -370,7 +366,6 @@ export function SendClickSendCampaignPage() {
             </Card>
           )}
 
-          {statusMessage && <Alert severity="error">{statusMessage}</Alert>}
         </Stack>
       </Container>
 

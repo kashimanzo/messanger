@@ -7,12 +7,15 @@ import {
   Stack,
 } from '@mui/material';
 import { ContactForm, type ContactFormValues } from '../components/contact-form';
+import { useFeedback } from '../components/feedback-provider';
 import { MobileAppBar } from '../components/mobile-app-bar';
+import { getErrorMessage } from '../lib/get-error-message';
 import { trpc } from '../lib/trpc';
 import { useContactsStore } from '../stores/contacts-store';
 
 export function AddContactPage() {
   const navigate = useNavigate();
+  const { showError } = useFeedback();
   const utils = trpc.useUtils();
   const upsertContact = useContactsStore((state) => state.upsertContact);
   const createContact = trpc.createContact.useMutation();
@@ -31,9 +34,9 @@ export function AddContactPage() {
       await utils.getContactStats.invalidate();
       navigate('/phonebook');
     } catch (error) {
-      setErrorMessage(
-        error instanceof Error ? error.message : 'Failed to save contact.',
-      );
+      const message = getErrorMessage(error, 'Failed to save contact.');
+      setErrorMessage(message);
+      showError(message);
     }
   };
 

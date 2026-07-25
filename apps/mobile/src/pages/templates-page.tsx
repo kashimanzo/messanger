@@ -21,9 +21,11 @@ import {
 } from '@mui/material';
 import { useState } from 'react';
 import { FiEdit3, FiPlus, FiTrash2 } from 'react-icons/fi';
+import { useFeedback } from '../components/feedback-provider';
 import { MobileAppBar } from '../components/mobile-app-bar';
 import { useMessagingFeatures } from '../hooks/use-messaging-features';
 import { useTemplates } from '../hooks/use-templates';
+import { getErrorMessage } from '../lib/get-error-message';
 import { trpc } from '../lib/trpc';
 
 function WhatsAppTemplatesView() {
@@ -142,12 +144,17 @@ function WhatsAppTemplatesView() {
 
 function SmsTemplatesView() {
   const navigate = useNavigate();
+  const { showError, showSuccess } = useFeedback();
   const utils = trpc.useUtils();
   const { data, isLoading, error, refetch } = trpc.listClickSendTemplates.useQuery();
   const deleteTemplate = trpc.deleteClickSendTemplate.useMutation({
     onSuccess: async () => {
       await utils.listClickSendTemplates.invalidate();
       setDeleteTarget(null);
+      showSuccess('Template deleted.');
+    },
+    onError: (mutationError) => {
+      showError(getErrorMessage(mutationError, 'Failed to delete template.'));
     },
   });
   const [deleteTarget, setDeleteTarget] = useState<number | null>(null);
@@ -265,10 +272,15 @@ function SmsTemplatesView() {
           <Button
             color="error"
             disabled={deleteTemplate.isPending || deleteTarget == null}
-            onClick={() =>
-              deleteTarget != null &&
-              void deleteTemplate.mutateAsync({ templateId: deleteTarget })
-            }
+            onClick={() => {
+              if (deleteTarget == null) {
+                return;
+              }
+
+              void deleteTemplate.mutateAsync({ templateId: deleteTarget }).catch(() => {
+                // onError already surfaces the message
+              });
+            }}
           >
             Delete
           </Button>

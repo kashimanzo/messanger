@@ -16,7 +16,9 @@ import {
   Typography,
 } from '@mui/material';
 import { FiMail, FiLock } from 'react-icons/fi';
+import { useFeedback } from '../components/feedback-provider';
 import { authClient } from '../lib/auth';
+import { getErrorMessage } from '../lib/get-error-message';
 import { useAuthStore } from '../stores/auth-store';
 
 const loginSchema = z.object({
@@ -28,6 +30,7 @@ type LoginForm = z.infer<typeof loginSchema>;
 
 export function LoginPage() {
   const navigate = useNavigate();
+  const { showError } = useFeedback();
   const setUser = useAuthStore((state) => state.setUser);
   const setLoading = useAuthStore((state) => state.setLoading);
   const [error, setError] = useState<string | null>(null);
@@ -43,29 +46,38 @@ export function LoginPage() {
   const onSubmit = async (data: LoginForm) => {
     setError(null);
 
-    const result = await authClient.signIn.email({
-      email: data.email,
-      password: data.password,
-    });
-
-    if (result.error) {
-      setError(result.error.message ?? 'Failed to sign in');
-      return;
-    }
-
-    if (result.data?.user) {
-      setUser({
-        id: result.data.user.id,
-        name: result.data.user.name,
-        email: result.data.user.email,
-        image: result.data.user.image,
+    try {
+      const result = await authClient.signIn.email({
+        email: data.email,
+        password: data.password,
       });
-      setLoading(false);
+
+      if (result.error) {
+        const message =
+          result.error.message?.trim() || 'Failed to sign in';
+        setError(message);
+        showError(message);
+        return;
+      }
+
+      if (result.data?.user) {
+        setUser({
+          id: result.data.user.id,
+          name: result.data.user.name,
+          email: result.data.user.email,
+          image: result.data.user.image,
+        });
+        setLoading(false);
+      }
+
+      await authClient.getSession({ fetchOptions: { credentials: 'include' } });
+
+      navigate('/home', { replace: true });
+    } catch (err) {
+      const message = getErrorMessage(err, 'Failed to sign in');
+      setError(message);
+      showError(message);
     }
-
-    await authClient.getSession({ fetchOptions: { credentials: 'include' } });
-
-    navigate('/home', { replace: true });
   };
 
   return (

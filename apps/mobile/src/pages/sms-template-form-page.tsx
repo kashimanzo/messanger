@@ -9,12 +9,15 @@ import {
   Stack,
   TextField,
 } from '@mui/material';
+import { useFeedback } from '../components/feedback-provider';
 import { MobileAppBar } from '../components/mobile-app-bar';
 import { useMessagingFeatures } from '../hooks/use-messaging-features';
+import { getErrorMessage } from '../lib/get-error-message';
 import { trpc } from '../lib/trpc';
 
 export function SmsTemplateFormPage() {
   const navigate = useNavigate();
+  const { showError } = useFeedback();
   const { templateId } = useParams();
   const editingId = templateId ? Number(templateId) : null;
   const isEditing = Number.isFinite(editingId) && (editingId as number) > 0;
@@ -22,7 +25,6 @@ export function SmsTemplateFormPage() {
 
   const [templateName, setTemplateName] = useState('');
   const [body, setBody] = useState('');
-  const [statusMessage, setStatusMessage] = useState<string | null>(null);
 
   const utils = trpc.useUtils();
   const existing = trpc.getClickSendTemplate.useQuery(
@@ -72,10 +74,8 @@ export function SmsTemplateFormPage() {
   }
 
   const handleSave = async () => {
-    setStatusMessage(null);
-
     if (!templateName.trim() || !body.trim()) {
-      setStatusMessage('Name and message body are required.');
+      showError('Name and message body are required.');
       return;
     }
 
@@ -93,9 +93,7 @@ export function SmsTemplateFormPage() {
         });
       }
     } catch (error) {
-      setStatusMessage(
-        error instanceof Error ? error.message : 'Failed to save template.',
-      );
+      showError(getErrorMessage(error, 'Failed to save template.'));
     }
   };
 
@@ -133,8 +131,6 @@ export function SmsTemplateFormPage() {
             helperText={`${body.length}/1600`}
             inputProps={{ maxLength: 1600 }}
           />
-
-          {statusMessage && <Alert severity="error">{statusMessage}</Alert>}
 
           <Button
             variant="contained"
