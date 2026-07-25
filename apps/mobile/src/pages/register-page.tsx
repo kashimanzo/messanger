@@ -105,10 +105,10 @@ export function RegisterPage() {
         <CardContent sx={{ p: 3 }}>
           <Stack spacing={3}>
             <Box>
-              <Typography variant="h5" fontWeight={700}>
+              <Typography variant="h5" sx={{ fontWeight: 400, mb: 0.5 }}>
                 Create account
               </Typography>
-              <Typography variant="body2" color="text.secondary">
+              <Typography variant="caption" sx={{ color: 'text.disabled' }}>
                 Register to start using Bulk Messanger
               </Typography>
             </Box>

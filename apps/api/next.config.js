@@ -18,8 +18,6 @@ const nextConfig = {
     '@prisma/client',
     'prisma',
     'kysely',
-    'bullmq',
-    'ioredis',
   ],
 };
 

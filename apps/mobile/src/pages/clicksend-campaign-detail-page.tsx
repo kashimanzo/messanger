@@ -50,8 +50,11 @@ export function ClickSendCampaignDetailPage() {
 
   if (campaignQuery.isLoading) {
     return (
-      <Container maxWidth="sm" sx={{ py: 6, display: 'flex', justifyContent: 'center' }}>
-        <CircularProgress />
+      <Container
+        maxWidth="sm"
+        sx={{ py: 4, display: 'flex', justifyContent: 'center' }}
+      >
+        <CircularProgress size={28} />
       </Container>
     );
   }
@@ -60,7 +63,7 @@ export function ClickSendCampaignDetailPage() {
     return (
       <Box sx={{ minHeight: '100dvh', bgcolor: 'background.default' }}>
         <MobileAppBar title="Campaign" onBack={() => navigate('/campaigns')} />
-        <Container maxWidth="sm" sx={{ py: 3 }}>
+        <Container maxWidth="sm" sx={{ py: 1.5, px: 2 }}>
           <Alert severity="error">
             {campaignQuery.error?.message ?? 'Campaign not found.'}
           </Alert>
@@ -76,44 +79,56 @@ export function ClickSendCampaignDetailPage() {
     <Box sx={{ minHeight: '100dvh', bgcolor: 'background.default' }}>
       <MobileAppBar title="ClickSend campaign" onBack={() => navigate('/campaigns')} />
 
-      <Container maxWidth="sm" sx={{ py: 3, pb: 10 }}>
-        <Stack spacing={2}>
-          <Card>
-            <CardContent>
-              <Stack spacing={1.5}>
-                <Typography variant="h5" sx={{ fontWeight: 700 }}>
+      <Container maxWidth="sm" sx={{ py: 1.5, px: 2, pb: 3 }}>
+        <Stack spacing={1.5}>
+          <Card sx={{ borderRadius: 0 }}>
+            <CardContent sx={{ py: 1.5, px: 1.5, '&:last-child': { pb: 1.5 } }}>
+              <Stack spacing={1}>
+                <Typography variant="h6" sx={{ fontWeight: 500, lineHeight: 1.3 }}>
                   {campaign.name}
                 </Typography>
-                <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
-                  <Chip label={campaign.status} color="primary" />
-                  <Chip label="ClickSend" variant="outlined" />
+                <Stack direction="row" spacing={0.75} flexWrap="wrap" useFlexGap>
+                  <Chip
+                    label={campaign.status}
+                    size="small"
+                    color="primary"
+                    sx={{ borderRadius: 0 }}
+                  />
+                  <Chip
+                    label="ClickSend"
+                    size="small"
+                    variant="outlined"
+                    sx={{ borderRadius: 0 }}
+                  />
                 </Stack>
-                <Typography variant="body2" color="text.secondary">
+                <Typography variant="caption" sx={{ color: 'text.disabled' }}>
                   List: {campaign.listName ?? campaign.listId}
                   {campaign.totalCount != null
                     ? ` · ${campaign.totalCount} recipients`
                     : ''}
+                  {campaign.from ? ` · From ${campaign.from}` : ''}
                 </Typography>
-                {campaign.from && (
-                  <Typography variant="body2" color="text.secondary">
-                    From: {campaign.from}
-                  </Typography>
-                )}
                 {campaign.dateAdded && (
-                  <Typography variant="caption" color="text.secondary">
-                    Created {format(new Date(campaign.dateAdded * 1000), 'PPpp')}
+                  <Typography variant="caption" sx={{ color: 'text.disabled' }}>
+                    Created{' '}
+                    {format(new Date(campaign.dateAdded * 1000), 'MMM d, yyyy · h:mm a')}
                   </Typography>
                 )}
               </Stack>
             </CardContent>
           </Card>
 
-          <Card variant="outlined">
-            <CardContent>
-              <Typography variant="subtitle2" gutterBottom>
+          <Card variant="outlined" sx={{ borderRadius: 0 }}>
+            <CardContent sx={{ py: 1.25, px: 1.5, '&:last-child': { pb: 1.25 } }}>
+              <Typography variant="caption" sx={{ color: 'text.disabled', display: 'block', mb: 0.5 }}>
                 Message
               </Typography>
-              <Typography sx={{ whiteSpace: 'pre-wrap' }}>{campaign.body}</Typography>
+              <Typography
+                variant="body2"
+                sx={{ whiteSpace: 'pre-wrap', color: 'text.primary' }}
+              >
+                {campaign.body}
+              </Typography>
             </CardContent>
           </Card>
 
@@ -126,12 +141,16 @@ export function ClickSendCampaignDetailPage() {
               color="error"
               variant="outlined"
               disabled={cancelCampaign.isPending}
+              fullWidth
+              sx={{ borderRadius: 0 }}
               onClick={() =>
-                void cancelCampaign.mutateAsync({ smsCampaignId: campaign.smsCampaignId })
+                void cancelCampaign.mutateAsync({
+                  smsCampaignId: campaign.smsCampaignId,
+                })
               }
             >
               {cancelCampaign.isPending ? (
-                <CircularProgress size={22} />
+                <CircularProgress size={20} />
               ) : (
                 'Cancel campaign'
               )}

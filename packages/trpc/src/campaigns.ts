@@ -1,11 +1,78 @@
 import { TRPCError } from '@trpc/server';
-import {
-  serializeCampaign,
-  serializeCampaignMessage,
-} from '@bulk-messanger/queue';
 import { getOwnedContactGroup, validateOwnedContactIds } from './groups';
 
-export { serializeCampaign, serializeCampaignMessage };
+export function serializeCampaign(campaign: {
+  id: string;
+  type: 'TEMPLATE' | 'TEXT';
+  channel?: 'WHATSAPP' | 'SMS';
+  status: 'QUEUED' | 'PROCESSING' | 'COMPLETED' | 'FAILED' | 'PARTIAL';
+  templateName: string | null;
+  templateLanguage: string | null;
+  textBody: string | null;
+  groupId: string | null;
+  groupName: string | null;
+  totalCount: number;
+  sentCount: number;
+  failedCount: number;
+  pendingCount: number;
+  createdAt: Date;
+  updatedAt: Date;
+  completedAt: Date | null;
+}) {
+  const progress =
+    campaign.totalCount === 0
+      ? 0
+      : Math.round(
+          ((campaign.sentCount + campaign.failedCount) / campaign.totalCount) *
+            100,
+        );
+
+  return {
+    id: campaign.id,
+    type: campaign.type,
+    channel: campaign.channel ?? 'SMS',
+    status: campaign.status,
+    templateName: campaign.templateName,
+    templateLanguage: campaign.templateLanguage,
+    textBody: campaign.textBody,
+    groupId: campaign.groupId,
+    groupName: campaign.groupName,
+    totalCount: campaign.totalCount,
+    sentCount: campaign.sentCount,
+    failedCount: campaign.failedCount,
+    pendingCount: campaign.pendingCount,
+    progress,
+    createdAt: campaign.createdAt,
+    updatedAt: campaign.updatedAt,
+    completedAt: campaign.completedAt,
+  };
+}
+
+export function serializeCampaignMessage(message: {
+  id: string;
+  phoneNumber: string;
+  contactName: string | null;
+  status: 'PENDING' | 'QUEUED' | 'SENT' | 'FAILED' | 'SKIPPED_OPTOUT';
+  whatsappMessageId: string | null;
+  providerMessageId?: string | null;
+  error: string | null;
+  attempts: number;
+  sentAt: Date | null;
+  createdAt: Date;
+}) {
+  return {
+    id: message.id,
+    phoneNumber: message.phoneNumber,
+    contactName: message.contactName,
+    status: message.status,
+    whatsappMessageId: message.whatsappMessageId,
+    providerMessageId: message.providerMessageId ?? message.whatsappMessageId,
+    error: message.error,
+    attempts: message.attempts,
+    sentAt: message.sentAt,
+    createdAt: message.createdAt,
+  };
+}
 
 export async function getOwnedCampaign(userId: string, campaignId: string) {
   const { prisma } = await import('@bulk-messanger/database');

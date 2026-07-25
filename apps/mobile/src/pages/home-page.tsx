@@ -2,13 +2,12 @@ import { useMemo, useState, type MouseEvent, type ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Box,
-  Button,
   Card,
   CardActionArea,
-  CardContent,
   Chip,
   Container,
   Fab,
+  IconButton,
   ListItemIcon,
   ListItemText,
   Menu,
@@ -18,7 +17,6 @@ import {
 } from '@mui/material';
 import { MobileAppBar } from '../components/mobile-app-bar';
 import {
-  FiBook,
   FiDollarSign,
   FiDownload,
   FiLayers,
@@ -34,6 +32,105 @@ import { authClient, clearMobileAuthSession } from '../lib/auth';
 import { trpc } from '../lib/trpc';
 import { useAuthStore } from '../stores/auth-store';
 import { useContactsStore } from '../stores/contacts-store';
+
+type HomeTile = {
+  title: string;
+  description: string;
+  icon: ReactNode;
+  path: string;
+  chip?: string;
+  tone: 'blue' | 'green' | 'orange' | 'purple' | 'teal' | 'red';
+};
+
+const toneStyles = {
+  blue: { bg: '#e8f0fe', fg: '#1a73e8' },
+  green: { bg: '#e6f4ea', fg: '#188038' },
+  orange: { bg: '#fef7e0', fg: '#e37400' },
+  purple: { bg: '#f3e8fd', fg: '#9334e6' },
+  teal: { bg: '#e0f7f5', fg: '#007b83' },
+  red: { bg: '#fce8e6', fg: '#d93025' },
+} as const;
+
+function HomeActionTile({
+  tile,
+  onOpen,
+}: {
+  tile: HomeTile;
+  onOpen: (path: string) => void;
+}) {
+  const tone = toneStyles[tile.tone];
+
+  return (
+    <Card
+      sx={{
+        height: '100%',
+        transition: 'box-shadow 0.15s ease, border-color 0.15s ease',
+        '&:hover': {
+          borderColor: 'primary.light',
+          boxShadow: '0 1px 3px rgba(60,64,67,.2), 0 4px 8px rgba(60,64,67,.1)',
+        },
+      }}
+    >
+      <CardActionArea
+        onClick={() => onOpen(tile.path)}
+        sx={{
+          height: '100%',
+          alignItems: 'stretch',
+          p: 2,
+        }}
+      >
+        <Stack spacing={1.5} sx={{ height: '100%' }}>
+          <Stack direction="row" alignItems="flex-start" justifyContent="space-between">
+            <Box
+              sx={{
+                width: 44,
+                height: 44,
+                borderRadius: '12px',
+                bgcolor: tone.bg,
+                color: tone.fg,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              {tile.icon}
+            </Box>
+            {tile.chip ? (
+              <Chip
+                label={tile.chip}
+                size="small"
+                sx={{
+                  bgcolor: 'secondary.light',
+                  color: 'text.secondary',
+                  border: 'none',
+                }}
+              />
+            ) : null}
+          </Stack>
+
+          <Box sx={{ flexGrow: 1 }}>
+            <Typography
+              variant="subtitle1"
+              sx={{ color: 'text.primary', lineHeight: 1.3, mb: 0.5 }}
+            >
+              {tile.title}
+            </Typography>
+            <Typography
+              variant="caption"
+              sx={{
+                display: 'block',
+                color: 'text.disabled',
+                lineHeight: 1.35,
+              }}
+            >
+              {tile.description}
+            </Typography>
+          </Box>
+        </Stack>
+      </CardActionArea>
+    </Card>
+  );
+}
 
 export function HomePage() {
   const navigate = useNavigate();
@@ -62,90 +159,102 @@ export function HomePage() {
     return `${campaigns.length} recent`;
   }, [campaigns]);
 
-  const phonebookActions = useMemo(
+  const messagingTiles: HomeTile[] = useMemo(
     () => [
       {
-        title: 'Sent campaigns',
-        description: 'Track queued SMS campaigns and delivery progress',
-        icon: <FiList size={22} />,
-        path: '/campaigns',
-        chip: recentCampaignCount,
+        title: 'Send SMS',
+        description: 'Price and send a campaign',
+        icon: <FiSend size={22} />,
+        path: '/campaigns/clicksend/new',
+        tone: 'blue',
       },
       {
-        title: 'SMS templates',
-        description: 'Create and manage ClickSend SMS templates',
+        title: 'Check price',
+        description: 'Estimate ClickSend cost',
+        icon: <FiDollarSign size={22} />,
+        path: '/campaigns/clicksend/price',
+        tone: 'orange',
+      },
+      {
+        title: 'Templates',
+        description: 'Reusable SMS messages',
         icon: <FiMessageSquare size={22} />,
         path: '/templates',
         chip: 'ClickSend',
+        tone: 'purple',
       },
       {
-        title: 'Check campaign price',
-        description: 'See what ClickSend will charge before you send',
-        icon: <FiDollarSign size={22} />,
-        path: '/campaigns/clicksend/price',
-        chip: undefined as string | undefined,
+        title: 'Campaigns',
+        description: 'View send history',
+        icon: <FiList size={22} />,
+        path: '/campaigns',
+        chip: recentCampaignCount,
+        tone: 'teal',
       },
+    ],
+    [recentCampaignCount],
+  );
+
+  const contactTiles: HomeTile[] = useMemo(
+    () => [
       {
-        title: 'Send SMS campaign',
-        description: 'Price and send bulk SMS via ClickSend campaigns',
-        icon: <FiSend size={22} />,
-        path: '/campaigns/clicksend/new',
-        chip: undefined as string | undefined,
-      },
-      {
-        title: 'Contact groups',
-        description: 'Organize contacts into groups for bulk sending',
-        icon: <FiLayers size={22} />,
-        path: '/groups',
-        chip: groups ? `${groups.length} groups` : undefined,
-      },
-      {
-        title: 'View phonebook',
-        description: 'Browse, search, and manage saved contacts',
+        title: 'Phonebook',
+        description: 'Browse saved contacts',
         icon: <FiUsers size={22} />,
         path: '/phonebook',
-        chip: contactStats ? `${contactStats.total} saved` : undefined,
+        chip: contactStats ? `${contactStats.total}` : undefined,
+        tone: 'green',
+      },
+      {
+        title: 'Groups',
+        description: 'Organize for bulk send',
+        icon: <FiLayers size={22} />,
+        path: '/groups',
+        chip: groups ? `${groups.length}` : undefined,
+        tone: 'blue',
       },
       {
         title: 'Add contact',
-        description: 'Create a new contact in your app phonebook',
+        description: 'Create a new contact',
         icon: <FiUserPlus size={22} />,
         path: '/phonebook/new',
-        chip: undefined as string | undefined,
+        tone: 'teal',
       },
       {
-        title: 'Import from device',
-        description: 'Pull contacts from your phone and save them here',
+        title: 'Import',
+        description: 'From device contacts',
         icon: <FiDownload size={22} />,
         path: '/phonebook/import',
-        chip: contactStats ? `${contactStats.imported} imported` : undefined,
+        chip: contactStats ? `${contactStats.imported}` : undefined,
+        tone: 'orange',
       },
     ],
-    [contactStats, groups, recentCampaignCount],
+    [contactStats, groups],
   );
 
-  const sendMenuActions: Array<{ name: string; icon: ReactNode; path: string }> = [
-    {
-      name: 'Check campaign price',
-      icon: <FiDollarSign size={18} />,
-      path: '/campaigns/clicksend/price',
-    },
-    {
-      name: 'Send SMS campaign',
-      icon: <FiSend size={18} />,
-      path: '/campaigns/clicksend/new',
-    },
-    {
-      name: 'SMS templates',
-      icon: <FiMessageSquare size={18} />,
-      path: '/templates',
-    },
-    {
-      name: 'Sent campaigns',
-      icon: <FiList size={18} />,
-      path: '/campaigns',
-    },
-  ];
+  const sendMenuActions: Array<{ name: string; icon: ReactNode; path: string }> =
+    [
+      {
+        name: 'Send SMS campaign',
+        icon: <FiSend size={18} />,
+        path: '/campaigns/clicksend/new',
+      },
+      {
+        name: 'Check campaign price',
+        icon: <FiDollarSign size={18} />,
+        path: '/campaigns/clicksend/price',
+      },
+      {
+        name: 'SMS templates',
+        icon: <FiMessageSquare size={18} />,
+        path: '/templates',
+      },
+      {
+        name: 'Campaign history',
+        icon: <FiList size={18} />,
+        path: '/campaigns',
+      },
+    ];
 
   const openSendPath = (path: string) => {
     setFabAnchor(null);
@@ -161,100 +270,114 @@ export function HomePage() {
       <MobileAppBar
         title="Bulk Messanger"
         rightAction={
-          <Button
-            variant="outlined"
-            size="small"
-            startIcon={<FiLogOut />}
+          <IconButton
+            aria-label="Sign out"
             onClick={handleSignOut}
+            sx={{ color: 'text.secondary' }}
           >
-            Sign out
-          </Button>
+            <FiLogOut size={20} />
+          </IconButton>
         }
       />
 
-      <Container maxWidth="sm" sx={{ py: 3, pb: 10 }}>
+      <Container maxWidth="sm" sx={{ py: 2.5, pb: 12 }}>
         <Stack spacing={3}>
           <Box>
-            <Typography variant="h4" fontWeight={700}>
-              {displayUser?.name}
+            <Typography
+              variant="body2"
+              sx={{ color: 'text.disabled', mb: 0.25 }}
+            >
+              Welcome back
             </Typography>
-            <Typography color="text.secondary" sx={{ mt: 0.5 }}>
-              Phonebook & SMS campaigns
+            <Typography
+              variant="h5"
+              sx={{ fontWeight: 400, color: 'text.primary', lineHeight: 1.3 }}
+            >
+              {displayUser?.name || 'Home'}
             </Typography>
           </Box>
 
-          <Stack spacing={2}>
-            {phonebookActions.map((action, index) => (
-              <Card key={`${action.path}:${action.title}:${index}`}>
-                <CardActionArea onClick={() => navigate(action.path)}>
-                  <CardContent>
-                    <Stack direction="row" spacing={2} alignItems="center">
-                      <Box
-                        sx={{
-                          width: 44,
-                          height: 44,
-                          borderRadius: '50%',
-                          bgcolor: 'primary.main',
-                          color: 'primary.contrastText',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          flexShrink: 0,
-                        }}
-                      >
-                        {action.icon}
-                      </Box>
-                      <Box sx={{ flexGrow: 1 }}>
-                        <Stack direction="row" spacing={1} alignItems="center">
-                          <Typography variant="h6">{action.title}</Typography>
-                          {action.chip && (
-                            <Chip
-                              label={action.chip}
-                              size="small"
-                              color="primary"
-                              variant="outlined"
-                            />
-                          )}
-                        </Stack>
-                        <Typography variant="body2" color="text.secondary">
-                          {action.description}
-                        </Typography>
-                      </Box>
-                      <ListItemIcon sx={{ minWidth: 0, color: 'text.secondary' }}>
-                        <FiBook />
-                      </ListItemIcon>
-                    </Stack>
-                  </CardContent>
-                </CardActionArea>
-              </Card>
-            ))}
-          </Stack>
+          {contactStats ? (
+            <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
+              <Chip
+                label={`${contactStats.total} contacts`}
+                size="small"
+                sx={{ bgcolor: 'primary.light', color: 'primary.dark' }}
+              />
+              <Chip
+                label={`${contactStats.manual} manual`}
+                size="small"
+                variant="outlined"
+              />
+              <Chip
+                label={`${contactStats.imported} imported`}
+                size="small"
+                variant="outlined"
+              />
+            </Stack>
+          ) : null}
 
-          {contactStats && (
-            <Card variant="outlined">
-              <CardContent>
-                <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
-                  <Chip label={`${contactStats.total} total`} />
-                  <Chip label={`${contactStats.manual} manual`} variant="outlined" />
-                  <Chip label={`${contactStats.imported} imported`} variant="outlined" />
-                </Stack>
-              </CardContent>
-            </Card>
-          )}
+          <Box>
+            <Typography
+              variant="subtitle2"
+              sx={{ color: 'text.secondary', mb: 1.5, px: 0.25 }}
+            >
+              Messaging
+            </Typography>
+            <Box
+              sx={{
+                display: 'grid',
+                gridTemplateColumns: '1fr 1fr',
+                gap: 1.5,
+              }}
+            >
+              {messagingTiles.map((tile) => (
+                <HomeActionTile
+                  key={tile.path}
+                  tile={tile}
+                  onOpen={navigate}
+                />
+              ))}
+            </Box>
+          </Box>
+
+          <Box>
+            <Typography
+              variant="subtitle2"
+              sx={{ color: 'text.secondary', mb: 1.5, px: 0.25 }}
+            >
+              Contacts
+            </Typography>
+            <Box
+              sx={{
+                display: 'grid',
+                gridTemplateColumns: '1fr 1fr',
+                gap: 1.5,
+              }}
+            >
+              {contactTiles.map((tile) => (
+                <HomeActionTile
+                  key={tile.path}
+                  tile={tile}
+                  onOpen={navigate}
+                />
+              ))}
+            </Box>
+          </Box>
         </Stack>
       </Container>
 
       <Fab
         color="primary"
-        aria-label="Send message"
+        aria-label="Quick actions"
         aria-controls={fabAnchor ? 'send-message-menu' : undefined}
         aria-haspopup="true"
         aria-expanded={fabAnchor ? 'true' : undefined}
         onClick={handleFabClick}
         sx={{
           position: 'fixed',
-          bottom: 'calc(24px + env(safe-area-inset-bottom))',
-          right: 'calc(24px + env(safe-area-inset-right))',
+          bottom: 'calc(20px + env(safe-area-inset-bottom))',
+          right: 'calc(20px + env(safe-area-inset-right))',
           zIndex: (theme) => theme.zIndex.speedDial,
         }}
       >
@@ -268,16 +391,32 @@ export function HomePage() {
         onClose={() => setFabAnchor(null)}
         anchorOrigin={{ vertical: 'top', horizontal: 'left' }}
         transformOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+        slotProps={{
+          paper: {
+            sx: {
+              borderRadius: 3,
+              minWidth: 220,
+              border: '1px solid',
+              borderColor: 'divider',
+              boxShadow:
+                '0 1px 3px rgba(60,64,67,.2), 0 4px 8px rgba(60,64,67,.15)',
+            },
+          },
+        }}
       >
         {sendMenuActions.map((action) => (
           <MenuItem
             key={`${action.path}:${action.name}`}
             onClick={() => openSendPath(action.path)}
+            sx={{ py: 1.25, borderRadius: 2, mx: 0.5 }}
           >
             <ListItemIcon sx={{ minWidth: 36, color: 'primary.main' }}>
               {action.icon}
             </ListItemIcon>
-            <ListItemText>{action.name}</ListItemText>
+            <ListItemText
+              primary={action.name}
+              primaryTypographyProps={{ variant: 'body2', fontWeight: 500 }}
+            />
           </MenuItem>
         ))}
       </Menu>

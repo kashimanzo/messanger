@@ -97,10 +97,10 @@ export function LoginPage() {
         <CardContent sx={{ p: 3 }}>
           <Stack spacing={3}>
             <Box>
-              <Typography variant="h5" fontWeight={700}>
+              <Typography variant="h5" sx={{ fontWeight: 400, mb: 0.5 }}>
                 Sign in
               </Typography>
-              <Typography variant="body2" color="text.secondary">
+              <Typography variant="caption" sx={{ color: 'text.disabled' }}>
                 Access your Bulk Messanger account
               </Typography>
             </Box>

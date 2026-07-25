@@ -322,31 +322,38 @@ export const appRouter = router({
         ),
     )
     .mutation(async ({ ctx, input }) => {
-      const { enqueueTextCampaign } = await import('@bulk-messanger/queue');
-      const { recipients } = await resolveCampaignRecipients(ctx.user.id, input);
+      const {
+        createClickSendListFromRecipients,
+        toTrpcClickSendError,
+      } = await import('./clicksend');
 
-      if (recipients.length === 0) {
-        throw new TRPCError({
-          code: 'BAD_REQUEST',
-          message: 'No recipients found for this campaign',
+      try {
+        const {
+          assertClickSendRecipientCount,
+          sendSmsCampaign,
+        } = await import('@bulk-messanger/clicksend');
+
+        const list = await createClickSendListFromRecipients({
+          userId: ctx.user.id,
+          campaignName: `SMS ${new Date().toISOString()}`,
+          groupId: input.groupId,
+          contactIds: input.contactIds,
+          recipients: input.recipients,
         });
-      }
+        assertClickSendRecipientCount(list.recipients.length);
 
-      return enqueueTextCampaign({
-        userId: ctx.user.id,
-        textBody: input.message,
-        channel: 'SMS',
-        recipients,
-      });
+        return sendSmsCampaign({
+          listId: list.listId,
+          name: `SMS ${new Date().toISOString()}`,
+          body: input.message,
+        });
+      } catch (error) {
+        throw toTrpcClickSendError(error);
+      }
     }),
   getCampaign: protectedProcedure
     .input(z.object({ id: z.string().min(1) }))
     .query(async ({ ctx, input }) => {
-      const { refreshCampaignStatus, recoverStalledCampaign } = await import(
-        '@bulk-messanger/queue'
-      );
-      await recoverStalledCampaign(input.id);
-      await refreshCampaignStatus(input.id);
       const campaign = await getOwnedCampaign(ctx.user.id, input.id);
       return serializeCampaign(campaign);
     }),
@@ -618,7 +625,6 @@ export const appRouter = router({
           assertClickSendRecipientCount,
           calculateSmsCampaignPrice,
           calculateSmsMessagesPrice,
-          getClickSendSendMode,
         } = await import('@bulk-messanger/clicksend');
 
         const { recipients, groupName } = await resolveCampaignRecipients(
@@ -627,9 +633,7 @@ export const appRouter = router({
         );
         assertClickSendRecipientCount(recipients.length);
 
-        const mode = getClickSendSendMode(recipients.length);
-
-        if (mode === 'local') {
+        if (recipients.length < 1000) {
           const price = await calculateSmsMessagesPrice({
             body: input.message,
             phoneNumbers: recipients.map((recipient) => recipient.phoneNumber),
@@ -707,25 +711,25 @@ export const appRouter = router({
       try {
         const {
           assertClickSendRecipientCount,
-          getClickSendSendMode,
           sendSmsCampaign,
         } = await import('@bulk-messanger/clicksend');
-        const { enqueueTextCampaign } = await import('@bulk-messanger/queue');
-
+        const { sendTrackedSmsCampaign } = await import('./send-tracked-sms');
         const { recipients, groupName } = await resolveCampaignRecipients(
           ctx.user.id,
           input,
         );
         assertClickSendRecipientCount(recipients.length);
 
-        const mode = getClickSendSendMode(recipients.length);
-
-        if (mode === 'local') {
-          const campaign = await enqueueTextCampaign({
+        // Small/medium blasts: send via ClickSend SMS API and keep local
+        // per-message details for the campaign detail screen.
+        if (recipients.length < 1000) {
+          const campaign = await sendTrackedSmsCampaign({
             userId: ctx.user.id,
+            name: input.name,
             textBody: input.message,
-            channel: 'SMS',
             from: input.from,
+            groupId: input.groupId,
+            groupName,
             recipients,
           });
 
@@ -742,6 +746,7 @@ export const appRouter = router({
           };
         }
 
+        // Large blasts: ClickSend native campaign API.
         let listId = input.listId;
         let listName: string | undefined;
         let recipientCount = recipients.length;
@@ -769,8 +774,8 @@ export const appRouter = router({
 
         return {
           mode: 'clicksend' as const,
-          campaignId: undefined as string | undefined,
           ...campaign,
+          campaignId: undefined as string | undefined,
           recipientCount: recipientCount ?? campaign.totalCount,
           groupName,
           listName: listName ?? campaign.listName,

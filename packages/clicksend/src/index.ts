@@ -27,12 +27,9 @@ export { calculateSmsMessagesPrice } from './price';
 export type { SmsMessagesPrice } from './price';
 
 export {
-  CLICKSEND_NATIVE_CAMPAIGN_MIN_RECIPIENTS,
   CLICKSEND_NATIVE_CAMPAIGN_MAX_RECIPIENTS,
-  getClickSendSendMode,
   assertClickSendRecipientCount,
 } from './limits';
-export type { ClickSendSendMode } from './limits';
 
 export {
   listSmsTemplates,

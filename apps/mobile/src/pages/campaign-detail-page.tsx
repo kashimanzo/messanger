@@ -96,32 +96,34 @@ export function CampaignDetailPage() {
     <Box sx={{ minHeight: '100dvh', bgcolor: 'background.default' }}>
       <MobileAppBar title="Campaign details" onBack={() => navigate('/campaigns')} />
 
-      <Container maxWidth="sm" sx={{ py: 3 }}>
+      <Container maxWidth="sm" sx={{ py: 1.5, px: 2, pb: 3 }}>
         {!campaign ? (
-          <Box sx={{ display: 'flex', justifyContent: 'center', py: 6 }}>
-            <CircularProgress />
+          <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
+            <CircularProgress size={28} />
           </Box>
         ) : (
-          <Stack spacing={3}>
+          <Stack spacing={1.5}>
             <Box>
-              <Typography variant="h5" fontWeight={700}>
+              <Typography variant="h6" sx={{ fontWeight: 500, lineHeight: 1.3 }}>
                 {campaign.templateName ?? 'Text message'}
               </Typography>
-              <Typography color="text.secondary" sx={{ mt: 0.5 }}>
+              <Typography variant="caption" sx={{ color: 'text.disabled' }}>
                 {campaign.groupName ?? 'Custom recipients'}
               </Typography>
             </Box>
 
-            <Stack spacing={1}>
-              <Stack direction="row" spacing={1} alignItems="center">
-                <Chip label="SMS" variant="outlined" />
-                <Chip label={campaign.status} color="primary" />
-                <Typography variant="body2" color="text.secondary">
-                  {campaign.messagesPerSecond} msgs/sec limit
-                </Typography>
+            <Stack spacing={0.75}>
+              <Stack direction="row" spacing={0.75} alignItems="center" flexWrap="wrap" useFlexGap>
+                <Chip label="SMS" size="small" variant="outlined" sx={{ borderRadius: 0 }} />
+                <Chip
+                  label={campaign.status}
+                  size="small"
+                  color="primary"
+                  sx={{ borderRadius: 0 }}
+                />
               </Stack>
 
-              <Typography variant="body1">
+              <Typography variant="body2">
                 {campaign.sentCount} of {campaign.totalCount} sent
                 {campaign.pendingCount > 0 ? ` · ${campaign.pendingCount} remaining` : ''}
                 {campaign.failedCount > 0 ? ` · ${campaign.failedCount} failed` : ''}
@@ -130,44 +132,55 @@ export function CampaignDetailPage() {
               <LinearProgress
                 variant="determinate"
                 value={campaign.progress}
-                sx={{ height: 10, borderRadius: 5 }}
+                sx={{
+                  height: 6,
+                  borderRadius: 0,
+                  bgcolor: 'secondary.light',
+                }}
               />
 
-              <Typography variant="caption" color="text.secondary">
-                Started {format(new Date(campaign.createdAt), 'PPpp')}
+              <Typography variant="caption" sx={{ color: 'text.disabled' }}>
+                Started {format(new Date(campaign.createdAt), 'MMM d, yyyy · h:mm a')}
                 {campaign.completedAt
-                  ? ` · Completed ${format(new Date(campaign.completedAt), 'PPpp')}`
+                  ? ` · Done ${format(new Date(campaign.completedAt), 'h:mm a')}`
                   : ''}
               </Typography>
             </Stack>
 
             {isPolling && (
               <Alert severity="info">
-                Sending messages in the background with provider rate limits applied.
+                Sending in progress…
               </Alert>
             )}
 
             {isStalled && (
               <Alert severity="warning">
-                Sending appears stalled. Restart the API server (`pnpm dev:api`). If you use
-                Redis, make sure it is running on port 6379.
+                Sending appears stalled. Check the API server and try again.
               </Alert>
             )}
 
             <Box>
-              <Typography variant="h6" gutterBottom>
-                Messages
+              <Typography variant="subtitle2" sx={{ mb: 0.75 }}>
+                Messages ({messages?.length ?? 0})
               </Typography>
               <List
+                dense
+                disablePadding
                 sx={{
                   bgcolor: 'background.paper',
-                  borderRadius: 2,
+                  borderRadius: 0,
                   border: '1px solid',
                   borderColor: 'divider',
+                  overflow: 'hidden',
                 }}
               >
-                {messages?.map((message) => (
-                  <ListItem key={message.id} divider>
+                {messages?.map((message, index) => (
+                  <ListItem
+                    key={message.id}
+                    dense
+                    divider={index < (messages?.length ?? 0) - 1}
+                    sx={{ py: 0.5, px: 1.5, minHeight: 44 }}
+                  >
                     <ListItemText
                       primary={message.contactName ?? `+${message.phoneNumber}`}
                       secondary={
@@ -179,9 +192,31 @@ export function CampaignDetailPage() {
                             : ''}
                         </>
                       }
+                      primaryTypographyProps={{
+                        variant: 'body2',
+                        fontWeight: 500,
+                        noWrap: true,
+                      }}
+                      secondaryTypographyProps={{
+                        variant: 'caption',
+                        sx: { color: 'text.disabled' },
+                        noWrap: true,
+                      }}
+                      sx={{ my: 0 }}
                     />
                   </ListItem>
                 ))}
+                {(messages?.length ?? 0) === 0 && (
+                  <ListItem dense sx={{ py: 1.25, px: 1.5 }}>
+                    <ListItemText
+                      primary="No messages yet"
+                      primaryTypographyProps={{
+                        variant: 'body2',
+                        color: 'text.secondary',
+                      }}
+                    />
+                  </ListItem>
+                )}
               </List>
             </Box>
           </Stack>

@@ -10,6 +10,7 @@ import {
   CircularProgress,
   Container,
   FormControl,
+  InputAdornment,
   InputLabel,
   MenuItem,
   Select,
@@ -17,6 +18,7 @@ import {
   TextField,
   Typography,
 } from '@mui/material';
+import { FiSearch } from 'react-icons/fi';
 import {
   ContactPicker,
   SelectAllContactsControl,
@@ -34,7 +36,8 @@ export function CheckClickSendCampaignPricePage() {
   const { data: groups } = trpc.listContactGroups.useQuery(undefined, {
     enabled: true,
   });
-  const { allContacts: contacts } = useContacts();
+  const [recipientSearch, setRecipientSearch] = useState('');
+  const { allContacts, contacts: filteredContacts } = useContacts(recipientSearch);
   const templatesQuery = trpc.listClickSendTemplates.useQuery(undefined, {
     enabled: true,
   });
@@ -75,34 +78,34 @@ export function CheckClickSendCampaignPricePage() {
     }
 
     for (const contactId of selectedContactIds) {
-      const contact = contacts?.find((entry) => entry.id === contactId);
+      const contact = allContacts?.find((entry) => entry.id === contactId);
       if (contact) phones.add(contact.phoneNumber);
     }
 
     return phones.size;
-  }, [groupId, groups, selectedContactIds, contacts]);
-
-  const sendMode =
-    recipientCount > 0 && recipientCount < 1000
-      ? 'local'
-      : recipientCount >= 1000
-        ? 'clicksend'
-        : null;
+  }, [groupId, groups, selectedContactIds, allContacts]);
 
   const navigateAfterSend = (result: {
-    mode: 'local' | 'clicksend';
+    mode?: 'local' | 'clicksend';
     campaignId?: string;
     smsCampaignId?: number;
   }) => {
     if (result.mode === 'local' && result.campaignId) {
-      navigate(`/campaigns/${result.campaignId}`);
+      navigate(`/campaigns/${result.campaignId}`, { replace: true });
       return;
     }
-    if (result.mode === 'clicksend' && result.smsCampaignId) {
-      navigate(`/campaigns/clicksend/${result.smsCampaignId}`);
+
+    if (result.smsCampaignId) {
+      navigate(`/campaigns/clicksend/${result.smsCampaignId}`, { replace: true });
       return;
     }
-    throw new Error('Campaign was created but no detail route was returned.');
+
+    if (result.campaignId) {
+      navigate(`/campaigns/${result.campaignId}`, { replace: true });
+      return;
+    }
+
+    navigate('/campaigns', { replace: true });
   };
 
   const toggleContact = (contactId: string) => {
@@ -186,9 +189,9 @@ export function CheckClickSendCampaignPricePage() {
     try {
       const result = await sendCampaign.mutateAsync({
         ...buildPayload(),
-        listId:
-          pricePreview.mode === 'clicksend' ? pricePreview.listId : undefined,
+        listId: pricePreview.listId,
       });
+      showSuccess('Campaign sent.');
       navigateAfterSend(result);
     } catch (error) {
       showError(getErrorMessage(error, 'Failed to send campaign.'));
@@ -209,13 +212,12 @@ export function CheckClickSendCampaignPricePage() {
 
       <Container
         maxWidth="sm"
-        sx={{ py: 3, pb: 'calc(120px + env(safe-area-inset-bottom))' }}
+        sx={{ py: 1.5, px: 2, pb: 'calc(168px + env(safe-area-inset-bottom))' }}
       >
-        <Stack spacing={3}>
-          <Alert severity="info">
-            Under 1,000 recipients: priced and sent with ClickSend&apos;s SMS
-            API and tracked in this app. 1,000–20,000: ClickSend native
-            campaign (include an opt-out such as reply STOP).
+        <Stack spacing={1.5}>
+          <Alert severity="info" sx={{ '& .MuiAlert-message': { py: 0.5 } }}>
+            Prices and sends go through ClickSend. After sending, you&apos;ll see
+            this campaign&apos;s delivery details.
           </Alert>
 
           <TextField
@@ -223,6 +225,7 @@ export function CheckClickSendCampaignPricePage() {
             value={name}
             onChange={(event) => setName(event.target.value)}
             fullWidth
+            size="small"
           />
 
           <TextField
@@ -235,11 +238,12 @@ export function CheckClickSendCampaignPricePage() {
             placeholder="BulkMsg or +4477..."
             required
             fullWidth
-            helperText="Required for ClickSend campaigns (alphanumeric brand or phone number)."
+            size="small"
+            helperText="Alphanumeric brand or phone number"
           />
 
           {(templatesQuery.data?.length ?? 0) > 0 && (
-            <FormControl fullWidth>
+            <FormControl fullWidth size="small">
               <InputLabel id="price-template-select">Use template</InputLabel>
               <Select
                 labelId="price-template-select"
@@ -247,13 +251,14 @@ export function CheckClickSendCampaignPricePage() {
                 value={templateId}
                 onChange={(event) => handleApplyTemplate(event.target.value)}
               >
-                <MenuItem value="">
+                <MenuItem value="" dense>
                   <em>None</em>
                 </MenuItem>
                 {templatesQuery.data?.map((template) => (
                   <MenuItem
                     key={template.templateId}
                     value={String(template.templateId)}
+                    dense
                   >
                     {template.templateName}
                   </MenuItem>
@@ -270,25 +275,18 @@ export function CheckClickSendCampaignPricePage() {
               setPricePreview(null);
             }}
             multiline
-            minRows={5}
+            minRows={3}
             fullWidth
+            size="small"
             helperText={`${message.length}/1600`}
             inputProps={{ maxLength: 1600 }}
           />
 
-          {sendMode && (
-            <Alert severity={sendMode === 'local' ? 'success' : 'warning'}>
-              {sendMode === 'local'
-                ? `Local app campaign via SMS Send API (${recipientCount} recipient${recipientCount === 1 ? '' : 's'}).`
-                : `ClickSend native campaign (${recipientCount.toLocaleString()} recipients). Max 20,000.`}
-            </Alert>
-          )}
-
           <Box>
-            <Typography variant="h6" gutterBottom>
+            <Typography variant="subtitle2" sx={{ mb: 0.75 }}>
               Recipients ({recipientCount})
             </Typography>
-            <FormControl fullWidth sx={{ mb: 2 }}>
+            <FormControl fullWidth size="small" sx={{ mb: 1 }}>
               <InputLabel id="price-group-select">Contact group</InputLabel>
               <Select
                 labelId="price-group-select"
@@ -299,28 +297,57 @@ export function CheckClickSendCampaignPricePage() {
                   setPricePreview(null);
                 }}
               >
-                <MenuItem value="">
+                <MenuItem value="" dense>
                   <em>No group selected</em>
                 </MenuItem>
                 {groups?.map((group) => (
-                  <MenuItem key={group.id} value={group.id}>
+                  <MenuItem key={group.id} value={group.id} dense>
                     {group.name} ({group.memberCount})
                   </MenuItem>
                 ))}
               </Select>
             </FormControl>
 
-            {contacts && contacts.length > 0 && (
+            <TextField
+              size="small"
+              fullWidth
+              placeholder="Search name or phone"
+              value={recipientSearch}
+              onChange={(event) => setRecipientSearch(event.target.value)}
+              sx={{ mb: 1 }}
+              InputProps={{
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <FiSearch size={16} color="#9aa0a6" />
+                  </InputAdornment>
+                ),
+              }}
+            />
+
+            {filteredContacts.length > 0 && (
               <SelectAllContactsControl
-                contacts={contacts}
+                contacts={filteredContacts}
                 selectedIds={selectedContactIds}
-                onChange={(ids) => {
-                  setSelectedContactIds(ids);
+                onChange={(nextVisible) => {
+                  setSelectedContactIds((current) => {
+                    const visibleIds = new Set(
+                      filteredContacts.map((contact) => contact.id),
+                    );
+                    const merged = new Set(current);
+                    for (const id of visibleIds) {
+                      merged.delete(id);
+                    }
+                    for (const id of nextVisible) {
+                      merged.add(id);
+                    }
+                    return merged;
+                  });
                   setPricePreview(null);
                 }}
               />
             )}
             <ContactPicker
+              search={recipientSearch}
               selectedIds={selectedContactIds}
               onToggle={(id) => {
                 toggleContact(id);
@@ -332,23 +359,21 @@ export function CheckClickSendCampaignPricePage() {
           {pricePreview && (
             <Card
               variant="outlined"
-              sx={{ borderColor: 'primary.main', borderWidth: 2 }}
+              sx={{ borderRadius: 0, borderColor: 'primary.main', borderWidth: 1 }}
             >
-              <CardContent>
-                <Typography variant="overline" color="text.secondary">
+              <CardContent sx={{ py: 1.25, px: 1.5, '&:last-child': { pb: 1.25 } }}>
+                <Typography variant="caption" color="text.secondary">
                   Estimated charge
                 </Typography>
-                <Typography variant="h4" fontWeight={700}>
+                <Typography variant="h6" sx={{ fontWeight: 500 }}>
                   {priceLabel}
                 </Typography>
-                <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+                <Typography variant="caption" color="text.secondary">
                   {pricePreview.recipientCount} recipient
                   {pricePreview.recipientCount === 1 ? '' : 's'}
-                  {pricePreview.mode === 'local'
-                    ? ' · SMS Send API (tracked in app)'
-                    : pricePreview.listId
-                      ? ` · ClickSend list #${pricePreview.listId}`
-                      : ' · ClickSend campaign'}
+                  {pricePreview.listId
+                    ? ` · ClickSend list #${pricePreview.listId}`
+                    : ' · ClickSend campaign'}
                 </Typography>
               </CardContent>
             </Card>
@@ -364,26 +389,26 @@ export function CheckClickSendCampaignPricePage() {
           left: 0,
           right: 0,
           zIndex: 10,
-          p: 2,
-          pb: 'calc(16px + env(safe-area-inset-bottom))',
+          p: 1.5,
+          pb: 'calc(12px + env(safe-area-inset-bottom))',
           bgcolor: 'background.paper',
           borderTop: '1px solid',
           borderColor: 'divider',
         }}
       >
         <Container maxWidth="sm" disableGutters>
-          <Stack spacing={1}>
+          <Stack spacing={0.75}>
             <Button
               variant="contained"
-              size="large"
               onClick={() => void handlePrice()}
               disabled={
                 busy || recipientCount === 0 || !message.trim() || !from.trim()
               }
               fullWidth
+              sx={{ borderRadius: 0 }}
             >
               {calculatePrice.isPending ? (
-                <CircularProgress size={22} color="inherit" />
+                <CircularProgress size={20} color="inherit" />
               ) : (
                 'Calculate price'
               )}
@@ -391,13 +416,13 @@ export function CheckClickSendCampaignPricePage() {
             {pricePreview && (
               <Button
                 variant="outlined"
-                size="large"
                 onClick={() => void handleSend()}
                 disabled={busy}
                 fullWidth
+                sx={{ borderRadius: 0 }}
               >
                 {sendCampaign.isPending ? (
-                  <CircularProgress size={22} />
+                  <CircularProgress size={20} />
                 ) : (
                   `Send for ${priceLabel}`
                 )}

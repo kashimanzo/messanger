@@ -17,21 +17,36 @@ export function MobileAppBar({
 }: MobileAppBarProps) {
   return (
     <AppBar
-      position="static"
+      position="sticky"
       elevation={0}
-      color="transparent"
       sx={{
         pt: 'env(safe-area-inset-top)',
-        bgcolor: 'background.default',
+        bgcolor: 'background.paper',
+        borderBottom: '1px solid',
+        borderColor: 'divider',
       }}
     >
-      <Toolbar sx={{ minHeight: { xs: 56 } }}>
+      <Toolbar sx={{ minHeight: { xs: 56 }, gap: 0.5 }}>
         {onBack ? (
-          <IconButton edge="start" onClick={onBack} aria-label={backLabel} sx={{ mr: 0.5 }}>
+          <IconButton
+            edge="start"
+            onClick={onBack}
+            aria-label={backLabel}
+            sx={{ color: 'text.secondary' }}
+          >
             <FiArrowLeft size={22} />
           </IconButton>
         ) : null}
-        <Typography variant="h6" fontWeight={700} sx={{ flexGrow: 1 }} noWrap>
+        <Typography
+          variant="h6"
+          sx={{
+            flexGrow: 1,
+            fontWeight: 500,
+            color: 'text.primary',
+            letterSpacing: 0.15,
+          }}
+          noWrap
+        >
           {title}
         </Typography>
         {rightAction}

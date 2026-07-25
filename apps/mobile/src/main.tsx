@@ -12,7 +12,7 @@ import './styles.css';
 
 if (Capacitor.isNativePlatform()) {
   void StatusBar.setOverlaysWebView({ overlay: true });
-  void StatusBar.setStyle({ style: Style.Dark });
+  void StatusBar.setStyle({ style: Style.Light });
 }
 
 const root = ReactDOM.createRoot(
