@@ -44,9 +44,17 @@ export function getApiBaseUrl(): string {
     }
   }
 
-  if (Capacitor.getPlatform() === 'android') {
+  // Emulator-only fallbacks — never used in production APK/IPA builds
+  // (those must set VITE_API_URL to a public HTTPS API).
+  if (import.meta.env.DEV && Capacitor.getPlatform() === 'android') {
     return 'http://10.0.2.2:3000';
   }
 
-  return 'http://localhost:3000';
+  if (import.meta.env.DEV) {
+    return 'http://localhost:3000';
+  }
+
+  throw new Error(
+    'VITE_API_URL is missing. Set it to your public API URL before building the app.',
+  );
 }
