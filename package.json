@@ -21,9 +21,9 @@
     "mobile:ios": "nx run mobile:cap-open-ios",
     "mobile:android": "nx run mobile:cap-open-android",
     "mobile:install:android": "sh apps/mobile/android/install-debug.sh",
-    "mobile:apk:debug": "sh apps/mobile/android/build-apk.sh debug",
-    "mobile:apk:release": "sh apps/mobile/android/build-apk.sh release",
-    "mobile:apk": "pnpm mobile:sync && sh apps/mobile/android/build-apk.sh debug",
+    "mobile:apk:debug": "pnpm mobile:sync && sh apps/mobile/scripts/build-apk.sh debug",
+    "mobile:apk:release": "pnpm mobile:sync && sh apps/mobile/scripts/build-apk.sh release",
+    "mobile:apk": "pnpm mobile:apk:debug",
     "mobile:add-ios": "nx run mobile:cap-add-ios",
     "mobile:add-android": "nx run mobile:cap-add-android"
   },

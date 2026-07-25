@@ -6,7 +6,9 @@ import { nxCopyAssetsPlugin } from '@nx/vite/plugins/nx-copy-assets.plugin';
 
 export default defineConfig(() => ({
   root: import.meta.dirname,
-  envDir: '../../',
+  // Load apps/mobile/.env so native/APK builds bake the Railway API URL,
+  // not workspace-root localhost values used by local API/web.
+  envDir: import.meta.dirname,
   cacheDir: '../../node_modules/.vite/apps/mobile',
   server: {
     port: 4300,
