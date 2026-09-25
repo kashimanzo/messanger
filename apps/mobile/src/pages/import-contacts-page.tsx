@@ -145,25 +145,38 @@ export function ImportContactsPage() {
       return;
     }
 
+    const payload = selectedContacts.map((contact) => ({
+      name: contact.name,
+      phoneNumber: contact.phoneNumber,
+      email: contact.email,
+      deviceContactId: contact.deviceContactId,
+    }));
+
+    // Import in chunks so large phonebooks are not blocked by request size limits.
+    const IMPORT_CHUNK_SIZE = 1000;
+
     try {
-      const result = await importContacts.mutateAsync({
-        contacts: selectedContacts.map((contact) => ({
-          name: contact.name,
-          phoneNumber: contact.phoneNumber,
-          email: contact.email,
-          deviceContactId: contact.deviceContactId,
-        })),
-        skipDuplicates: true,
-      });
+      let imported = 0;
+      let skipped = 0;
+
+      for (let i = 0; i < payload.length; i += IMPORT_CHUNK_SIZE) {
+        const chunk = payload.slice(i, i + IMPORT_CHUNK_SIZE);
+        const result = await importContacts.mutateAsync({
+          contacts: chunk,
+          skipDuplicates: true,
+        });
+        imported += result.imported;
+        skipped += result.skipped;
+      }
 
       await refreshContacts();
       await utils.getContactStats.invalidate();
 
       showSuccess(
-        `Imported ${result.imported} contact${result.imported === 1 ? '' : 's'}. Skipped ${result.skipped} duplicate${result.skipped === 1 ? '' : 's'}.`,
+        `Imported ${imported} contact${imported === 1 ? '' : 's'}. Skipped ${skipped} duplicate${skipped === 1 ? '' : 's'}.`,
       );
 
-      if (result.imported > 0) {
+      if (imported > 0) {
         navigate('/phonebook');
       }
     } catch (error) {

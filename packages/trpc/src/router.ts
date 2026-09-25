@@ -218,7 +218,8 @@ export const appRouter = router({
   importContacts: protectedProcedure
     .input(
       z.object({
-        contacts: z.array(importContactSchema).min(1).max(500),
+        // Large imports are chunked by the client; keep a high per-request ceiling.
+        contacts: z.array(importContactSchema).min(1).max(5000),
         skipDuplicates: z.boolean().default(true),
       }),
     )
@@ -241,6 +242,14 @@ export const appRouter = router({
         status: 'imported' | 'duplicate' | 'invalid';
         error?: string;
       }> = [];
+      const toCreate: Array<{
+        userId: string;
+        name: string;
+        phoneNumber: string;
+        email: string | null;
+        source: 'IMPORTED';
+        deviceContactId: string | null;
+      }> = [];
 
       for (const contact of input.contacts) {
         if (!/^\d{10,15}$/.test(contact.phoneNumber)) {
@@ -254,7 +263,7 @@ export const appRouter = router({
           continue;
         }
 
-        if (existingNumbers.has(contact.phoneNumber)) {
+        if (input.skipDuplicates && existingNumbers.has(contact.phoneNumber)) {
           skipped += 1;
           results.push({
             phoneNumber: contact.phoneNumber,
@@ -264,33 +273,53 @@ export const appRouter = router({
           continue;
         }
 
-        try {
-          await prisma.contact.create({
-            data: {
-              userId: ctx.user.id,
-              name: contact.name,
-              phoneNumber: contact.phoneNumber,
-              email: contact.email,
-              source: 'IMPORTED',
-              deviceContactId: contact.deviceContactId,
-            },
-          });
+        existingNumbers.add(contact.phoneNumber);
+        toCreate.push({
+          userId: ctx.user.id,
+          name: contact.name,
+          phoneNumber: contact.phoneNumber,
+          email: contact.email ?? null,
+          source: 'IMPORTED',
+          deviceContactId: contact.deviceContactId ?? null,
+        });
+        results.push({
+          phoneNumber: contact.phoneNumber,
+          name: contact.name,
+          status: 'imported',
+        });
+      }
 
-          existingNumbers.add(contact.phoneNumber);
-          imported += 1;
-          results.push({
-            phoneNumber: contact.phoneNumber,
-            name: contact.name,
-            status: 'imported',
+      const CREATE_CHUNK = 500;
+      for (let i = 0; i < toCreate.length; i += CREATE_CHUNK) {
+        const chunk = toCreate.slice(i, i + CREATE_CHUNK);
+        try {
+          const created = await prisma.contact.createMany({
+            data: chunk,
+            skipDuplicates: true,
           });
+          imported += created.count;
+          if (created.count < chunk.length) {
+            skipped += chunk.length - created.count;
+          }
         } catch {
-          skipped += 1;
-          results.push({
-            phoneNumber: contact.phoneNumber,
-            name: contact.name,
-            status: 'duplicate',
-            error: 'Could not import contact',
-          });
+          // Fall back to per-row creates so a single bad row does not fail the batch.
+          for (const row of chunk) {
+            try {
+              await prisma.contact.create({ data: row });
+              imported += 1;
+            } catch {
+              skipped += 1;
+              const result = results.find(
+                (entry) =>
+                  entry.phoneNumber === row.phoneNumber &&
+                  entry.status === 'imported',
+              );
+              if (result) {
+                result.status = 'duplicate';
+                result.error = 'Could not import contact';
+              }
+            }
+          }
         }
       }
 
