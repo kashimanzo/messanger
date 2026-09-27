@@ -3,7 +3,7 @@ import { z } from 'zod';
 
 export const contactGroupInputSchema = z.object({
   name: z.string().trim().min(1, 'Group name is required').max(100),
-  contactIds: z.array(z.string().min(1)).max(500).default([]),
+  contactIds: z.array(z.string().min(1)).default([]),
 });
 
 export function serializeContactGroup(group: {
@@ -19,19 +19,25 @@ export function serializeContactGroup(group: {
       email: string | null;
     };
   }>;
-}) {
+}, options?: { includeMembers?: boolean }) {
+  const includeMembers = options?.includeMembers ?? true;
+
   return {
     id: group.id,
     name: group.name,
     memberCount: group.members.length,
-    members: [...group.members]
-      .sort((left, right) => left.contact.name.localeCompare(right.contact.name))
-      .map((member) => ({
-        id: member.contact.id,
-        name: member.contact.name,
-        phoneNumber: member.contact.phoneNumber,
-        email: member.contact.email,
-      })),
+    members: includeMembers
+      ? [...group.members]
+          .sort((left, right) =>
+            left.contact.name.localeCompare(right.contact.name),
+          )
+          .map((member) => ({
+            id: member.contact.id,
+            name: member.contact.name,
+            phoneNumber: member.contact.phoneNumber,
+            email: member.contact.email,
+          }))
+      : [],
     createdAt: group.createdAt,
     updatedAt: group.updatedAt,
   };
@@ -52,7 +58,35 @@ const groupInclude = {
   },
 };
 
-export { groupInclude };
+const groupSummaryInclude = {
+  _count: {
+    select: { members: true },
+  },
+};
+
+export function serializeContactGroupSummary(group: {
+  id: string;
+  name: string;
+  createdAt: Date;
+  updatedAt: Date;
+  _count: { members: number };
+}) {
+  return {
+    id: group.id,
+    name: group.name,
+    memberCount: group._count.members,
+    members: [] as Array<{
+      id: string;
+      name: string;
+      phoneNumber: string;
+      email: string | null;
+    }>,
+    createdAt: group.createdAt,
+    updatedAt: group.updatedAt,
+  };
+}
+
+export { groupInclude, groupSummaryInclude };
 
 export async function getOwnedContactGroup(userId: string, groupId: string) {
   const { prisma } = await import('@bulk-messanger/database');
@@ -112,11 +146,15 @@ export async function replaceGroupMembers(
   });
 
   if (contactIds.length > 0) {
-    await prisma.contactGroupMember.createMany({
-      data: contactIds.map((contactId) => ({
-        groupId,
-        contactId,
-      })),
-    });
+    const MEMBER_CHUNK = 1000;
+    const rows = contactIds.map((contactId) => ({
+      groupId,
+      contactId,
+    }));
+    for (let i = 0; i < rows.length; i += MEMBER_CHUNK) {
+      await prisma.contactGroupMember.createMany({
+        data: rows.slice(i, i + MEMBER_CHUNK),
+      });
+    }
   }
 }

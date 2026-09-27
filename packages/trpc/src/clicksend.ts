@@ -57,6 +57,39 @@ function splitName(fullName?: string) {
   };
 }
 
+export async function createClickSendListForRecipientChunk(options: {
+  campaignName: string;
+  recipients: ResolvedRecipient[];
+  chunkIndex?: number;
+  chunkCount?: number;
+}): Promise<{ listId: number; listName: string }> {
+  const { createListWithContacts } = await import('@bulk-messanger/clicksend');
+  const stamp = new Date().toISOString().replace(/[:.]/g, '-');
+  const partLabel =
+    options.chunkCount && options.chunkCount > 1
+      ? ` ${((options.chunkIndex ?? 0) + 1)}/${options.chunkCount}`
+      : '';
+  const listName =
+    `BM ${options.campaignName}`.slice(0, 35) + `${partLabel} ${stamp}`.slice(0, 25);
+
+  const list = await createListWithContacts({
+    listName: listName.slice(0, 60),
+    contacts: options.recipients.map((recipient) => {
+      const { firstName, lastName } = splitName(recipient.contactName);
+      return {
+        phoneNumber: recipient.phoneNumber,
+        firstName,
+        lastName,
+      };
+    }),
+  });
+
+  return {
+    listId: list.listId,
+    listName: list.listName,
+  };
+}
+
 export async function createClickSendListFromRecipients(options: {
   userId: string;
   campaignName: string;
@@ -69,7 +102,6 @@ export async function createClickSendListFromRecipients(options: {
   recipients: ResolvedRecipient[];
   groupName?: string;
 }> {
-  const { createListWithContacts } = await import('@bulk-messanger/clicksend');
   const { recipients, groupName } = await resolveCampaignRecipients(
     options.userId,
     options,
@@ -82,19 +114,9 @@ export async function createClickSendListFromRecipients(options: {
     });
   }
 
-  const stamp = new Date().toISOString().replace(/[:.]/g, '-');
-  const listName = `BM ${options.campaignName}`.slice(0, 40) + ` ${stamp}`.slice(0, 20);
-
-  const list = await createListWithContacts({
-    listName: listName.slice(0, 60),
-    contacts: recipients.map((recipient) => {
-      const { firstName, lastName } = splitName(recipient.contactName);
-      return {
-        phoneNumber: recipient.phoneNumber,
-        firstName,
-        lastName,
-      };
-    }),
+  const list = await createClickSendListForRecipientChunk({
+    campaignName: options.campaignName,
+    recipients,
   });
 
   return {

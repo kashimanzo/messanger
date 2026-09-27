@@ -1,23 +1,78 @@
+import { memo } from 'react';
 import {
   Box,
   Checkbox,
-  List,
-  ListItem,
   ListItemButton,
   ListItemIcon,
   ListItemText,
   Typography,
 } from '@mui/material';
 import { useContacts } from '../hooks/use-contacts';
+import { VirtualList } from './virtual-list';
 
 const CHECKBOX_COLUMN_WIDTH = 40;
 const ROW_LEFT_PADDING = 12;
+const ROW_HEIGHT = 52;
 
 type ContactPickerProps = {
   selectedIds: Set<string>;
   onToggle: (contactId: string) => void;
   search?: string;
 };
+
+type ContactRowProps = {
+  id: string;
+  name: string;
+  phoneNumber: string;
+  checked: boolean;
+  onToggle: (contactId: string) => void;
+  showDivider: boolean;
+};
+
+const ContactRow = memo(function ContactRow({
+  id,
+  name,
+  phoneNumber,
+  checked,
+  onToggle,
+  showDivider,
+}: ContactRowProps) {
+  return (
+    <ListItemButton
+      onClick={() => onToggle(id)}
+      dense
+      sx={{
+        py: 0.25,
+        minHeight: ROW_HEIGHT,
+        pl: `${ROW_LEFT_PADDING}px`,
+        pr: 1.5,
+        borderBottom: showDivider ? '1px solid' : 'none',
+        borderColor: 'divider',
+      }}
+    >
+      <ListItemIcon
+        sx={{
+          minWidth: CHECKBOX_COLUMN_WIDTH,
+          width: CHECKBOX_COLUMN_WIDTH,
+          mr: 0,
+        }}
+      >
+        <Checkbox
+          size="small"
+          checked={checked}
+          tabIndex={-1}
+          disableRipple
+          sx={{ p: 0.5 }}
+        />
+      </ListItemIcon>
+      <ListItemText
+        primary={name}
+        secondary={`+${phoneNumber}`}
+        sx={{ my: 0, '& .MuiListItemText-primary': { fontWeight: 500, fontSize: '0.875rem' } }}
+      />
+    </ListItemButton>
+  );
+});
 
 export function ContactPicker({ selectedIds, onToggle, search }: ContactPickerProps) {
   const { contacts, isLoading, error } = useContacts(search);
@@ -47,60 +102,28 @@ export function ContactPicker({ selectedIds, onToggle, search }: ContactPickerPr
   }
 
   return (
-    <List
-      dense
-      disablePadding
+    <VirtualList
+      items={contacts}
+      estimateSize={ROW_HEIGHT}
+      maxHeight="42vh"
+      getItemKey={(contact) => contact.id}
       sx={{
         bgcolor: 'background.paper',
         borderRadius: 0,
         border: '1px solid',
         borderColor: 'divider',
-        overflow: 'hidden',
-        maxHeight: '42vh',
-        overflowY: 'auto',
       }}
-    >
-      {contacts.map((contact, index) => (
-        <ListItem key={contact.id} disablePadding divider={index < contacts.length - 1}>
-          <ListItemButton
-            onClick={() => onToggle(contact.id)}
-            dense
-            sx={{ py: 0.25, minHeight: 40, pl: `${ROW_LEFT_PADDING}px`, pr: 1.5 }}
-          >
-            <ListItemIcon
-              sx={{
-                minWidth: CHECKBOX_COLUMN_WIDTH,
-                width: CHECKBOX_COLUMN_WIDTH,
-                mr: 0,
-              }}
-            >
-              <Checkbox
-                size="small"
-                checked={selectedIds.has(contact.id)}
-                tabIndex={-1}
-                disableRipple
-                sx={{ p: 0.5 }}
-              />
-            </ListItemIcon>
-            <ListItemText
-              primary={contact.name}
-              secondary={`+${contact.phoneNumber}`}
-              primaryTypographyProps={{
-                variant: 'body2',
-                fontWeight: 500,
-                noWrap: true,
-              }}
-              secondaryTypographyProps={{
-                variant: 'caption',
-                sx: { color: 'text.disabled' },
-                noWrap: true,
-              }}
-              sx={{ my: 0 }}
-            />
-          </ListItemButton>
-        </ListItem>
-      ))}
-    </List>
+      renderItem={(contact, index) => (
+        <ContactRow
+          id={contact.id}
+          name={contact.name}
+          phoneNumber={contact.phoneNumber}
+          checked={selectedIds.has(contact.id)}
+          onToggle={onToggle}
+          showDivider={index < contacts.length - 1}
+        />
+      )}
+    />
   );
 }
 

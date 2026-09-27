@@ -18,8 +18,10 @@ import {
   contactGroupInputSchema,
   getOwnedContactGroup,
   groupInclude,
+  groupSummaryInclude,
   replaceGroupMembers,
   serializeContactGroup,
+  serializeContactGroupSummary,
   validateOwnedContactIds,
 } from './groups';
 import type { TRPCContext } from './context';
@@ -218,8 +220,8 @@ export const appRouter = router({
   importContacts: protectedProcedure
     .input(
       z.object({
-        // Large imports are chunked by the client; keep a high per-request ceiling.
-        contacts: z.array(importContactSchema).min(1).max(5000),
+        // Large imports are chunked by the client; no hard upper bound here.
+        contacts: z.array(importContactSchema).min(1),
         skipDuplicates: z.boolean().default(true),
       }),
     )
@@ -337,8 +339,8 @@ export const appRouter = router({
         .object({
           message: z.string().trim().min(1).max(1600),
           groupId: z.string().min(1).optional(),
-          contactIds: z.array(z.string().min(1)).max(500).optional(),
-          recipients: z.array(phoneNumberSchema).max(500).optional(),
+          contactIds: z.array(z.string().min(1)).optional(),
+          recipients: z.array(phoneNumberSchema).optional(),
         })
         .refine(
           (input) =>
@@ -390,7 +392,7 @@ export const appRouter = router({
     .input(
       z
         .object({
-          limit: z.number().int().min(1).max(100).default(20),
+          limit: z.number().int().min(1).max(10_000).default(20),
         })
         .optional(),
     )
@@ -417,16 +419,35 @@ export const appRouter = router({
 
       return messages.map(serializeCampaignMessage);
     }),
-  listContactGroups: protectedProcedure.query(async ({ ctx }) => {
-    const { prisma } = await import('@bulk-messanger/database');
-    const groups = await prisma.contactGroup.findMany({
-      where: { userId: ctx.user.id },
-      include: groupInclude,
-      orderBy: [{ name: 'asc' }, { createdAt: 'desc' }],
-    });
+  listContactGroups: protectedProcedure
+    .input(
+      z
+        .object({
+          includeMembers: z.boolean().default(false),
+        })
+        .optional(),
+    )
+    .query(async ({ ctx, input }) => {
+      const { prisma } = await import('@bulk-messanger/database');
+      const includeMembers = input?.includeMembers ?? false;
 
-    return groups.map(serializeContactGroup);
-  }),
+      if (!includeMembers) {
+        const groups = await prisma.contactGroup.findMany({
+          where: { userId: ctx.user.id },
+          include: groupSummaryInclude,
+          orderBy: [{ name: 'asc' }, { createdAt: 'desc' }],
+        });
+        return groups.map(serializeContactGroupSummary);
+      }
+
+      const groups = await prisma.contactGroup.findMany({
+        where: { userId: ctx.user.id },
+        include: groupInclude,
+        orderBy: [{ name: 'asc' }, { createdAt: 'desc' }],
+      });
+
+      return groups.map((group) => serializeContactGroup(group));
+    }),
   getContactGroup: protectedProcedure
     .input(z.object({ id: z.string().min(1) }))
     .query(async ({ ctx, input }) => {
@@ -492,7 +513,7 @@ export const appRouter = router({
       z
         .object({
           page: z.number().int().min(1).default(1),
-          limit: z.number().int().min(15).max(100).default(50),
+          limit: z.number().int().min(1).max(10_000).default(50),
         })
         .optional(),
     )
@@ -580,7 +601,7 @@ export const appRouter = router({
       z
         .object({
           page: z.number().int().min(1).default(1),
-          limit: z.number().int().min(15).max(100).default(50),
+          limit: z.number().int().min(1).max(10_000).default(50),
         })
         .optional(),
     )
@@ -632,8 +653,8 @@ export const appRouter = router({
           message: z.string().trim().min(1).max(1600),
           from: z.string().trim().min(1).max(20).optional(),
           groupId: z.string().min(1).optional(),
-          contactIds: z.array(z.string().min(1)).max(20_000).optional(),
-          recipients: z.array(phoneNumberSchema).max(20_000).optional(),
+          contactIds: z.array(z.string().min(1)).optional(),
+          recipients: z.array(phoneNumberSchema).optional(),
         })
         .refine(
           (input) =>
@@ -645,7 +666,7 @@ export const appRouter = router({
     )
     .mutation(async ({ ctx, input }) => {
       const {
-        createClickSendListFromRecipients,
+        createClickSendListForRecipientChunk,
         toTrpcClickSendError,
       } = await import('./clicksend');
 
@@ -654,6 +675,7 @@ export const appRouter = router({
           assertClickSendRecipientCount,
           calculateSmsCampaignPrice,
           calculateSmsMessagesPrice,
+          chunkForClickSendCampaigns,
         } = await import('@bulk-messanger/clicksend');
 
         const { recipients, groupName } = await resolveCampaignRecipients(
@@ -682,28 +704,47 @@ export const appRouter = router({
           };
         }
 
-        const list = await createClickSendListFromRecipients({
-          userId: ctx.user.id,
-          campaignName: input.name,
-          groupId: input.groupId,
-          contactIds: input.contactIds,
-          recipients: input.recipients,
-        });
+        const chunks = chunkForClickSendCampaigns(recipients);
+        let totalPrice = 0;
+        let currency: string | undefined;
+        let firstListId: number | undefined;
+        let firstListName: string | undefined;
 
-        const price = await calculateSmsCampaignPrice({
-          listId: list.listId,
-          name: input.name,
-          body: input.message,
-          from: input.from,
-        });
+        for (let index = 0; index < chunks.length; index += 1) {
+          const chunk = chunks[index]!;
+          const list = await createClickSendListForRecipientChunk({
+            campaignName: input.name,
+            recipients: chunk,
+            chunkIndex: index,
+            chunkCount: chunks.length,
+          });
+
+          const price = await calculateSmsCampaignPrice({
+            listId: list.listId,
+            name:
+              chunks.length === 1
+                ? input.name
+                : `${input.name} (${index + 1}/${chunks.length})`,
+            body: input.message,
+            from: input.from,
+          });
+
+          totalPrice += price.price;
+          currency = price.currency ?? currency;
+          if (index === 0) {
+            firstListId = list.listId;
+            firstListName = list.listName;
+          }
+        }
 
         return {
           mode: 'clicksend' as const,
-          ...price,
-          listId: list.listId,
-          listName: list.listName,
-          recipientCount: list.recipients.length,
-          groupName: list.groupName,
+          price: totalPrice,
+          currency,
+          listId: firstListId,
+          listName: firstListName,
+          recipientCount: recipients.length,
+          groupName,
         };
       } catch (error) {
         throw toTrpcClickSendError(error);
@@ -720,8 +761,8 @@ export const appRouter = router({
           schedule: z.number().int().positive().optional(),
           listId: z.number().int().positive().optional(),
           groupId: z.string().min(1).optional(),
-          contactIds: z.array(z.string().min(1)).max(20_000).optional(),
-          recipients: z.array(phoneNumberSchema).max(20_000).optional(),
+          contactIds: z.array(z.string().min(1)).optional(),
+          recipients: z.array(phoneNumberSchema).optional(),
         })
         .refine(
           (input) =>
@@ -733,13 +774,14 @@ export const appRouter = router({
     )
     .mutation(async ({ ctx, input }) => {
       const {
-        createClickSendListFromRecipients,
+        createClickSendListForRecipientChunk,
         toTrpcClickSendError,
       } = await import('./clicksend');
 
       try {
         const {
           assertClickSendRecipientCount,
+          chunkForClickSendCampaigns,
           sendSmsCampaign,
         } = await import('@bulk-messanger/clicksend');
         const { sendTrackedSmsCampaign } = await import('./send-tracked-sms');
@@ -775,39 +817,64 @@ export const appRouter = router({
           };
         }
 
-        // Large blasts: ClickSend native campaign API.
-        let listId = input.listId;
-        let listName: string | undefined;
-        let recipientCount = recipients.length;
-
-        if (!listId) {
-          const list = await createClickSendListFromRecipients({
-            userId: ctx.user.id,
-            campaignName: input.name,
-            groupId: input.groupId,
-            contactIds: input.contactIds,
-            recipients: input.recipients,
+        // Large blasts: ClickSend native campaign API (auto-split over 20k).
+        if (input.listId) {
+          const campaign = await sendSmsCampaign({
+            listId: input.listId,
+            name: input.name,
+            body: input.message,
+            from: input.from,
+            schedule: input.schedule,
           });
-          listId = list.listId;
-          listName = list.listName;
-          recipientCount = list.recipients.length;
+
+          return {
+            mode: 'clicksend' as const,
+            ...campaign,
+            campaignId: undefined as string | undefined,
+            recipientCount: recipients.length,
+            groupName,
+            listName: campaign.listName,
+          };
         }
 
-        const campaign = await sendSmsCampaign({
-          listId,
-          name: input.name,
-          body: input.message,
-          from: input.from,
-          schedule: input.schedule,
-        });
+        const chunks = chunkForClickSendCampaigns(recipients);
+        const sentCampaigns: Array<Record<string, unknown>> = [];
+        let firstListName: string | undefined;
 
+        for (let index = 0; index < chunks.length; index += 1) {
+          const chunk = chunks[index]!;
+          const list = await createClickSendListForRecipientChunk({
+            campaignName: input.name,
+            recipients: chunk,
+            chunkIndex: index,
+            chunkCount: chunks.length,
+          });
+          if (index === 0) {
+            firstListName = list.listName;
+          }
+
+          const campaign = await sendSmsCampaign({
+            listId: list.listId,
+            name:
+              chunks.length === 1
+                ? input.name
+                : `${input.name} (${index + 1}/${chunks.length})`,
+            body: input.message,
+            from: input.from,
+            schedule: input.schedule,
+          });
+          sentCampaigns.push(campaign);
+        }
+
+        const first = sentCampaigns[0]!;
         return {
           mode: 'clicksend' as const,
-          ...campaign,
+          ...first,
           campaignId: undefined as string | undefined,
-          recipientCount: recipientCount ?? campaign.totalCount,
+          recipientCount: recipients.length,
           groupName,
-          listName: listName ?? campaign.listName,
+          listName: firstListName,
+          campaignCount: sentCampaigns.length,
         };
       } catch (error) {
         throw toTrpcClickSendError(error);

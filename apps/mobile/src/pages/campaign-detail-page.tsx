@@ -63,7 +63,7 @@ export function CampaignDetailPage() {
     { id },
     {
       enabled: Boolean(id),
-      refetchInterval: (query) => (shouldPollCampaign(query.state.data) ? 2000 : false),
+      refetchInterval: (query) => (shouldPollCampaign(query.state.data) ? 4000 : false),
     },
   );
 
@@ -73,7 +73,8 @@ export function CampaignDetailPage() {
     { campaignId: id },
     {
       enabled: Boolean(id),
-      refetchInterval: isPolling ? 2000 : false,
+      // Messages are heavier — poll less often while status is updating.
+      refetchInterval: isPolling ? 8000 : false,
     },
   );
 

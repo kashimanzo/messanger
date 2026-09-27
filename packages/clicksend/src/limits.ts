@@ -5,10 +5,20 @@ export function assertClickSendRecipientCount(recipientCount: number) {
   if (recipientCount <= 0) {
     throw new Error('No recipients found for this campaign');
   }
+}
 
-  if (recipientCount > CLICKSEND_NATIVE_CAMPAIGN_MAX_RECIPIENTS) {
-    throw new Error(
-      `ClickSend campaigns support up to ${CLICKSEND_NATIVE_CAMPAIGN_MAX_RECIPIENTS.toLocaleString()} recipients. Split this send into smaller batches.`,
-    );
+/** Split items into ClickSend-safe campaign list sizes. */
+export function chunkForClickSendCampaigns<T>(
+  items: T[],
+  size = CLICKSEND_NATIVE_CAMPAIGN_MAX_RECIPIENTS,
+): T[][] {
+  if (items.length === 0) {
+    return [];
   }
+
+  const chunks: T[][] = [];
+  for (let i = 0; i < items.length; i += size) {
+    chunks.push(items.slice(i, i + size));
+  }
+  return chunks;
 }

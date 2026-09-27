@@ -29,6 +29,7 @@ export type { SmsMessagesPrice } from './price';
 export {
   CLICKSEND_NATIVE_CAMPAIGN_MAX_RECIPIENTS,
   assertClickSendRecipientCount,
+  chunkForClickSendCampaigns,
 } from './limits';
 
 export {

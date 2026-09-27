@@ -33,9 +33,12 @@ export function SendClickSendCampaignPage() {
   const navigate = useNavigate();
   const { showError, showSuccess } = useFeedback();
   const clickSendFrom = import.meta.env.VITE_CLICKSEND_FROM?.trim() || null;
-  const { data: groups } = trpc.listContactGroups.useQuery(undefined, {
-    enabled: true,
-  });
+  const { data: groups } = trpc.listContactGroups.useQuery(
+    { includeMembers: true },
+    {
+      enabled: true,
+    },
+  );
   const [recipientSearch, setRecipientSearch] = useState('');
   const { allContacts, contacts: filteredContacts } = useContacts(recipientSearch);
   const templatesQuery = trpc.listClickSendTemplates.useQuery(undefined, {
@@ -69,6 +72,9 @@ export function SendClickSendCampaignPage() {
 
   const recipientCount = useMemo(() => {
     const phones = new Set<string>();
+    const contactById = new Map(
+      (allContacts ?? []).map((contact) => [contact.id, contact]),
+    );
 
     if (groupId) {
       const group = groups?.find((entry) => entry.id === groupId);
@@ -78,7 +84,7 @@ export function SendClickSendCampaignPage() {
     }
 
     for (const contactId of selectedContactIds) {
-      const contact = allContacts?.find((entry) => entry.id === contactId);
+      const contact = contactById.get(contactId);
       if (contact) phones.add(contact.phoneNumber);
     }
 

@@ -49,7 +49,8 @@ export const theme = createTheme({
     borderRadius: 16,
   },
   typography: {
-    fontFamily: '"Roboto", "Helvetica Neue", Arial, sans-serif',
+    fontFamily:
+      '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
     h4: {
       fontWeight: 400,
       letterSpacing: 0,

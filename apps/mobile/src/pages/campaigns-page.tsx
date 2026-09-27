@@ -387,7 +387,7 @@ function LocalTimelineCard({
 function CampaignsTimeline() {
   const navigate = useNavigate();
   const clickSendQuery = trpc.listClickSendCampaigns.useQuery({ limit: 50 });
-  const localQuery = trpc.listCampaigns.useQuery({ limit: 50 });
+  const localQuery = trpc.listCampaigns.useQuery({ limit: 100 });
 
   const isLoading = clickSendQuery.isLoading || localQuery.isLoading;
   const error = clickSendQuery.error ?? localQuery.error;

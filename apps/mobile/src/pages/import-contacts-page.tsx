@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { memo, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Alert,
@@ -9,8 +9,6 @@ import {
   Container,
   FormControlLabel,
   InputAdornment,
-  List,
-  ListItem,
   ListItemButton,
   ListItemIcon,
   ListItemText,
@@ -21,7 +19,8 @@ import {
 import { FiSearch } from 'react-icons/fi';
 import { useFeedback } from '../components/feedback-provider';
 import { MobileAppBar } from '../components/mobile-app-bar';
-import { useContacts } from '../hooks/use-contacts';
+import { VirtualList } from '../components/virtual-list';
+import { useContactsStore } from '../stores/contacts-store';
 import {
   isNativeContactsAvailable,
   loadDeviceContacts,
@@ -30,11 +29,41 @@ import {
 import { getErrorMessage } from '../lib/get-error-message';
 import { trpc } from '../lib/trpc';
 
+const IMPORT_ROW_HEIGHT = 56;
+
+type ImportRowProps = {
+  deviceContactId: string;
+  name: string;
+  phoneNumber: string;
+  checked: boolean;
+  onToggle: (id: string) => void;
+};
+
+const ImportRow = memo(function ImportRow({
+  deviceContactId,
+  name,
+  phoneNumber,
+  checked,
+  onToggle,
+}: ImportRowProps) {
+  return (
+    <ListItemButton
+      onClick={() => onToggle(deviceContactId)}
+      sx={{ minHeight: IMPORT_ROW_HEIGHT }}
+    >
+      <ListItemIcon sx={{ minWidth: 40 }}>
+        <Checkbox edge="start" checked={checked} tabIndex={-1} disableRipple />
+      </ListItemIcon>
+      <ListItemText primary={name} secondary={`+${phoneNumber}`} />
+    </ListItemButton>
+  );
+});
+
 export function ImportContactsPage() {
   const navigate = useNavigate();
   const { showError, showSuccess } = useFeedback();
   const utils = trpc.useUtils();
-  const { refresh: refreshContacts } = useContacts();
+  const setContacts = useContactsStore((state) => state.setContacts);
   const importContacts = trpc.importContacts.useMutation();
   const [deviceContacts, setDeviceContacts] = useState<DeviceContact[]>([]);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -83,7 +112,7 @@ export function ImportContactsPage() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [showError]);
 
   const filteredContacts = useMemo(() => {
     const query = search.trim().toLowerCase();
@@ -152,7 +181,6 @@ export function ImportContactsPage() {
       deviceContactId: contact.deviceContactId,
     }));
 
-    // Import in chunks so large phonebooks are not blocked by request size limits.
     const IMPORT_CHUNK_SIZE = 1000;
 
     try {
@@ -169,7 +197,10 @@ export function ImportContactsPage() {
         skipped += result.skipped;
       }
 
-      await refreshContacts();
+      // Refresh store without mounting the full useContacts fetch side-effects early.
+      const data = await utils.client.listContacts.query();
+      setContacts(data);
+      useContactsStore.getState().setHasFetched(true);
       await utils.getContactStats.invalidate();
 
       showSuccess(
@@ -205,12 +236,14 @@ export function ImportContactsPage() {
                 value={search}
                 onChange={(event) => setSearch(event.target.value)}
                 fullWidth
-                InputProps={{
-                  startAdornment: (
-                    <InputAdornment position="start">
-                      <FiSearch />
-                    </InputAdornment>
-                  ),
+                slotProps={{
+                  input: {
+                    startAdornment: (
+                      <InputAdornment position="start">
+                        <FiSearch />
+                      </InputAdornment>
+                    ),
+                  },
                 }}
               />
 
@@ -230,37 +263,31 @@ export function ImportContactsPage() {
               />
 
               {filteredContacts.length === 0 ? (
-                <Typography color="text.secondary" textAlign="center" sx={{ py: 4 }}>
+                <Typography color="text.secondary" sx={{ textAlign: 'center', py: 4 }}>
                   No device contacts with valid phone numbers were found.
                 </Typography>
               ) : (
-                <List
+                <VirtualList
+                  items={filteredContacts}
+                  estimateSize={IMPORT_ROW_HEIGHT}
+                  maxHeight="calc(100dvh - 280px)"
+                  getItemKey={(contact) => contact.deviceContactId}
                   sx={{
                     bgcolor: 'background.paper',
                     borderRadius: 2,
                     border: '1px solid',
                     borderColor: 'divider',
                   }}
-                >
-                  {filteredContacts.map((contact) => (
-                    <ListItem key={contact.deviceContactId} disablePadding>
-                      <ListItemButton onClick={() => toggleContact(contact.deviceContactId)}>
-                        <ListItemIcon>
-                          <Checkbox
-                            edge="start"
-                            checked={selectedIds.has(contact.deviceContactId)}
-                            tabIndex={-1}
-                            disableRipple
-                          />
-                        </ListItemIcon>
-                        <ListItemText
-                          primary={contact.name}
-                          secondary={`+${contact.phoneNumber}`}
-                        />
-                      </ListItemButton>
-                    </ListItem>
-                  ))}
-                </List>
+                  renderItem={(contact) => (
+                    <ImportRow
+                      deviceContactId={contact.deviceContactId}
+                      name={contact.name}
+                      phoneNumber={contact.phoneNumber}
+                      checked={selectedIds.has(contact.deviceContactId)}
+                      onToggle={toggleContact}
+                    />
+                  )}
+                />
               )}
             </>
           )}

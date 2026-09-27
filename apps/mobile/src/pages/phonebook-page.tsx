@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { memo, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Alert,
@@ -15,7 +15,6 @@ import {
   Fab,
   IconButton,
   InputAdornment,
-  List,
   ListItem,
   ListItemAvatar,
   ListItemButton,
@@ -27,10 +26,72 @@ import {
 import { FiDownload, FiPlus, FiSearch, FiTrash2 } from 'react-icons/fi';
 import { useFeedback } from '../components/feedback-provider';
 import { MobileAppBar } from '../components/mobile-app-bar';
+import { VirtualList } from '../components/virtual-list';
 import { useContacts } from '../hooks/use-contacts';
 import { getErrorMessage } from '../lib/get-error-message';
 import { trpc } from '../lib/trpc';
 import { useContactsStore } from '../stores/contacts-store';
+
+const PHONEBOOK_ROW_HEIGHT = 72;
+
+type PhonebookRowProps = {
+  id: string;
+  name: string;
+  phoneNumber: string;
+  email: string | null;
+  showDivider: boolean;
+  onOpen: (id: string) => void;
+  onDelete: (id: string) => void;
+};
+
+const PhonebookRow = memo(function PhonebookRow({
+  id,
+  name,
+  phoneNumber,
+  email,
+  showDivider,
+  onOpen,
+  onDelete,
+}: PhonebookRowProps) {
+  return (
+    <ListItem
+      disablePadding
+      divider={showDivider}
+      secondaryAction={
+        <IconButton
+          edge="end"
+          aria-label={`delete ${name}`}
+          onClick={() => onDelete(id)}
+          sx={{ mr: 0.5 }}
+        >
+          <FiTrash2 />
+        </IconButton>
+      }
+      sx={{ alignItems: 'stretch' }}
+    >
+      <ListItemButton
+        onClick={() => onOpen(id)}
+        sx={{ py: 1.25, pr: 7, minHeight: PHONEBOOK_ROW_HEIGHT }}
+      >
+        <ListItemAvatar>
+          <Avatar sx={{ bgcolor: 'primary.main', width: 36, height: 36, fontSize: 14 }}>
+            {name.charAt(0).toUpperCase()}
+          </Avatar>
+        </ListItemAvatar>
+        <ListItemText
+          primary={name}
+          secondary={
+            <>
+              +{phoneNumber}
+              {email ? ` · ${email}` : ''}
+            </>
+          }
+          sx={{ '& .MuiListItemText-primary': { fontWeight: 600 } }}
+        />
+      </ListItemButton>
+    </ListItem>
+  );
+});
 
 export function PhonebookPage() {
   const navigate = useNavigate();
@@ -91,12 +152,14 @@ export function PhonebookPage() {
             value={search}
             onChange={(event) => setSearch(event.target.value)}
             fullWidth
-            InputProps={{
-              startAdornment: (
-                <InputAdornment position="start">
-                  <FiSearch />
-                </InputAdornment>
-              ),
+            slotProps={{
+              input: {
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <FiSearch />
+                  </InputAdornment>
+                ),
+              },
             }}
           />
 
@@ -121,7 +184,7 @@ export function PhonebookPage() {
 
           {!isLoading && !error && contacts.length === 0 && (
             <Stack spacing={2} sx={{ py: 4 }}>
-              <Typography color="text.secondary" textAlign="center">
+              <Typography color="text.secondary" sx={{ textAlign: 'center' }}>
                 {emptyMessage}
               </Typography>
               <Button variant="contained" onClick={() => navigate('/phonebook/new')}>
@@ -134,58 +197,30 @@ export function PhonebookPage() {
           )}
 
           {!isLoading && !error && contacts.length > 0 && (
-            <List
-              disablePadding
+            <VirtualList
+              items={contacts}
+              estimateSize={PHONEBOOK_ROW_HEIGHT}
+              maxHeight="calc(100dvh - 220px)"
+              getItemKey={(contact) => contact.id}
               sx={{
                 bgcolor: 'background.paper',
                 borderRadius: 2,
                 border: '1px solid',
                 borderColor: 'divider',
-                overflow: 'hidden',
               }}
-            >
-              {contacts.map((contact, index) => (
-                <ListItem
-                  key={contact.id}
-                  disablePadding
-                  divider={index < contacts.length - 1}
-                  secondaryAction={
-                    <IconButton
-                      edge="end"
-                      aria-label={`delete ${contact.name}`}
-                      onClick={() => setDeleteTargetId(contact.id)}
-                      sx={{ mr: 0.5 }}
-                    >
-                      <FiTrash2 />
-                    </IconButton>
-                  }
-                  sx={{ alignItems: 'stretch' }}
-                >
-                  <ListItemButton
-                    onClick={() => navigate(`/phonebook/${contact.id}/edit`)}
-                    sx={{ py: 1.5, pr: 7 }}
-                  >
-                    <ListItemAvatar>
-                      <Avatar sx={{ bgcolor: 'primary.main' }}>
-                        {contact.name.charAt(0).toUpperCase()}
-                      </Avatar>
-                    </ListItemAvatar>
-                    <ListItemText
-                      primary={contact.name}
-                      secondary={
-                        <>
-                          +{contact.phoneNumber}
-                          {contact.email ? ` · ${contact.email}` : ''}
-                        </>
-                      }
-                      primaryTypographyProps={{ fontWeight: 600 }}
-                    />
-                  </ListItemButton>
-                </ListItem>
-              ))}
-            </List>
+              renderItem={(contact, index) => (
+                <PhonebookRow
+                  id={contact.id}
+                  name={contact.name}
+                  phoneNumber={contact.phoneNumber}
+                  email={contact.email}
+                  showDivider={index < contacts.length - 1}
+                  onOpen={(id) => navigate(`/phonebook/${id}/edit`)}
+                  onDelete={setDeleteTargetId}
+                />
+              )}
+            />
           )}
-
         </Stack>
       </Container>
 
