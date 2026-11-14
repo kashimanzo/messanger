@@ -17,21 +17,20 @@ import {
 } from '@mui/material';
 import { MobileAppBar } from '../components/mobile-app-bar';
 import {
+  FiCreditCard,
   FiDollarSign,
   FiDownload,
   FiLayers,
   FiList,
-  FiLogOut,
   FiMessageSquare,
   FiPlus,
   FiSend,
+  FiUser,
   FiUserPlus,
   FiUsers,
 } from 'react-icons/fi';
-import { authClient, clearMobileAuthSession } from '../lib/auth';
 import { trpc } from '../lib/trpc';
 import { useAuthStore } from '../stores/auth-store';
-import { useContactsStore } from '../stores/contacts-store';
 
 type HomeTile = {
   title: string;
@@ -135,7 +134,6 @@ function HomeActionTile({
 export function HomePage() {
   const navigate = useNavigate();
   const user = useAuthStore((state) => state.user);
-  const setUser = useAuthStore((state) => state.setUser);
   const [fabAnchor, setFabAnchor] = useState<HTMLElement | null>(null);
   const { data: profile } = trpc.getProfile.useQuery(undefined, {
     retry: false,
@@ -143,14 +141,6 @@ export function HomePage() {
   const { data: contactStats } = trpc.getContactStats.useQuery();
   const { data: groups } = trpc.listContactGroups.useQuery();
   const { data: campaigns } = trpc.listCampaigns.useQuery({ limit: 5 });
-
-  const handleSignOut = async () => {
-    await authClient.signOut();
-    clearMobileAuthSession();
-    setUser(null);
-    useContactsStore.getState().reset();
-    navigate('/login');
-  };
 
   const displayUser = profile ?? user;
 
@@ -190,6 +180,20 @@ export function HomePage() {
         path: '/campaigns',
         chip: recentCampaignCount,
         tone: 'teal',
+      },
+      {
+        title: 'Payments',
+        description: 'Balance and recharge',
+        icon: <FiCreditCard size={22} />,
+        path: '/payments',
+        tone: 'green',
+      },
+      {
+        title: 'Profile',
+        description: 'Account and password',
+        icon: <FiUser size={22} />,
+        path: '/profile',
+        tone: 'purple',
       },
     ],
     [recentCampaignCount],
@@ -271,11 +275,11 @@ export function HomePage() {
         title="Bulk Messanger"
         rightAction={
           <IconButton
-            aria-label="Sign out"
-            onClick={handleSignOut}
+            aria-label="Profile"
+            onClick={() => navigate('/profile')}
             sx={{ color: 'text.secondary' }}
           >
-            <FiLogOut size={20} />
+            <FiUser size={20} />
           </IconButton>
         }
       />
@@ -376,8 +380,8 @@ export function HomePage() {
         onClick={handleFabClick}
         sx={{
           position: 'fixed',
-          bottom: 'calc(20px + env(safe-area-inset-bottom))',
-          right: 'calc(20px + env(safe-area-inset-right))',
+          bottom: 'calc(20px + max(20px, env(safe-area-inset-bottom, 0px)))',
+          right: 'calc(20px + env(safe-area-inset-right, 0px))',
           zIndex: (theme) => theme.zIndex.speedDial,
         }}
       >

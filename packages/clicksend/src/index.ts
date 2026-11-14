@@ -42,3 +42,21 @@ export {
 export type { ClickSendTemplate } from './templates';
 
 export { ClickSendApiError, toE164 } from './http';
+
+export {
+  getClickSendAccountBalance,
+  getClickSendPaymentCard,
+  listClickSendPaymentCards,
+  listClickSendRechargePackages,
+  listClickSendTransactions,
+  purchaseClickSendRechargePackage,
+  updateClickSendPaymentCard,
+} from './account';
+export type {
+  ClickSendAccountBalance,
+  ClickSendPaymentCard,
+  ClickSendPaymentCardInput,
+  ClickSendPurchaseResult,
+  ClickSendRechargePackage,
+  ClickSendTransaction,
+} from './account';

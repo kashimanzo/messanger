@@ -88,8 +88,8 @@ export function LoginPage() {
         alignItems: 'center',
         justifyContent: 'center',
         p: 2,
-        pt: 'calc(16px + env(safe-area-inset-top))',
-        pb: 'calc(16px + env(safe-area-inset-bottom))',
+        pt: 'calc(16px + env(safe-area-inset-top, 0px))',
+        pb: 'calc(16px + max(20px, env(safe-area-inset-bottom, 0px)))',
         bgcolor: 'background.default',
       }}
     >

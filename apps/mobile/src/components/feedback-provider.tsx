@@ -85,8 +85,8 @@ export function FeedbackProvider({ children }: { children: ReactNode }) {
         anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
         sx={{
           top: {
-            xs: 'calc(12px + env(safe-area-inset-top))',
-            sm: 'calc(16px + env(safe-area-inset-top))',
+            xs: 'calc(12px + env(safe-area-inset-top, 0px))',
+            sm: 'calc(16px + env(safe-area-inset-top, 0px))',
           },
           left: 12,
           right: 12,

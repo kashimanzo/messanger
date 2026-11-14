@@ -595,6 +595,169 @@ export const appRouter = router({
       }
     }),
 
+  // --- ClickSend account / payments ---
+  getClickSendAccountBalance: protectedProcedure.query(async () => {
+    const { toTrpcClickSendError } = await import('./clicksend');
+
+    try {
+      const { getClickSendAccountBalance } = await import(
+        '@bulk-messanger/clicksend'
+      );
+      return getClickSendAccountBalance();
+    } catch (error) {
+      throw toTrpcClickSendError(error);
+    }
+  }),
+
+  getClickSendPaymentCard: protectedProcedure.query(async () => {
+    const { toTrpcClickSendError } = await import('./clicksend');
+
+    try {
+      const { getClickSendPaymentCard } = await import(
+        '@bulk-messanger/clicksend'
+      );
+      return getClickSendPaymentCard();
+    } catch (error) {
+      throw toTrpcClickSendError(error);
+    }
+  }),
+
+  listClickSendPaymentCards: protectedProcedure.query(async () => {
+    const { toTrpcClickSendError } = await import('./clicksend');
+
+    try {
+      const { listClickSendPaymentCards } = await import(
+        '@bulk-messanger/clicksend'
+      );
+      return listClickSendPaymentCards();
+    } catch (error) {
+      throw toTrpcClickSendError(error);
+    }
+  }),
+
+  updateClickSendPaymentCard: protectedProcedure
+    .input(
+      z.object({
+        number: z
+          .string()
+          .trim()
+          .transform((value) => value.replace(/\D/g, ''))
+          .pipe(z.string().min(12).max(19)),
+        expiryMonth: z.number().int().min(1).max(12),
+        expiryYear: z.number().int().min(2024).max(2100),
+        cvc: z
+          .string()
+          .trim()
+          .transform((value) => value.replace(/\D/g, ''))
+          .pipe(z.string().min(3).max(4)),
+        name: z.string().trim().min(2).max(100),
+        bankName: z.string().trim().min(2).max(100),
+      }),
+    )
+    .mutation(async ({ input }) => {
+      const { toTrpcClickSendError } = await import('./clicksend');
+
+      try {
+        const { updateClickSendPaymentCard } = await import(
+          '@bulk-messanger/clicksend'
+        );
+        // Card details are forwarded to ClickSend only; nothing is stored locally.
+        return updateClickSendPaymentCard(input);
+      } catch (error) {
+        throw toTrpcClickSendError(error);
+      }
+    }),
+
+  listClickSendRechargePackages: protectedProcedure
+    .input(
+      z
+        .object({
+          country: z.string().trim().length(2).optional(),
+        })
+        .optional(),
+    )
+    .query(async ({ input }) => {
+      const { toTrpcClickSendError } = await import('./clicksend');
+
+      try {
+        const { listClickSendRechargePackages } = await import(
+          '@bulk-messanger/clicksend'
+        );
+        return listClickSendRechargePackages({
+          country: input?.country,
+        });
+      } catch (error) {
+        throw toTrpcClickSendError(error);
+      }
+    }),
+
+  listClickSendTransactions: protectedProcedure
+    .input(
+      z
+        .object({
+          page: z.number().int().min(1).default(1),
+          limit: z.number().int().min(15).max(100).default(50),
+        })
+        .optional(),
+    )
+    .query(async ({ input }) => {
+      const { toTrpcClickSendError } = await import('./clicksend');
+
+      try {
+        const { listClickSendTransactions } = await import(
+          '@bulk-messanger/clicksend'
+        );
+        return listClickSendTransactions({
+          page: input?.page,
+          limit: input?.limit,
+        });
+      } catch (error) {
+        throw toTrpcClickSendError(error);
+      }
+    }),
+
+  purchaseClickSendRechargePackage: protectedProcedure
+    .input(
+      z.object({
+        packageId: z.number().int().positive(),
+      }),
+    )
+    .mutation(async ({ input }) => {
+      const { toTrpcClickSendError } = await import('./clicksend');
+
+      try {
+        const {
+          getClickSendPaymentCard,
+          purchaseClickSendRechargePackage,
+        } = await import('@bulk-messanger/clicksend');
+
+        const card = await getClickSendPaymentCard();
+        if (!card.hasCard) {
+          throw new TRPCError({
+            code: 'PRECONDITION_FAILED',
+            message:
+              'No card on file. Add a payment card in Payments, then try again.',
+          });
+        }
+
+        const purchase = await purchaseClickSendRechargePackage(input.packageId);
+        const { getClickSendAccountBalance } = await import(
+          '@bulk-messanger/clicksend'
+        );
+        const balance = await getClickSendAccountBalance();
+
+        return {
+          purchase,
+          balance,
+        };
+      } catch (error) {
+        if (error instanceof TRPCError) {
+          throw error;
+        }
+        throw toTrpcClickSendError(error);
+      }
+    }),
+
   // --- ClickSend SMS campaigns ---
   listClickSendCampaigns: protectedProcedure
     .input(

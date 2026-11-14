@@ -11,7 +11,9 @@ import { theme } from './theme/theme';
 import './styles.css';
 
 if (Capacitor.isNativePlatform()) {
-  void StatusBar.setOverlaysWebView({ overlay: true });
+  // Keep content below the system status bar so headers don't collide with
+  // clock / battery / notch icons (Android often reports safe-area inset as 0).
+  void StatusBar.setOverlaysWebView({ overlay: false });
   void StatusBar.setStyle({ style: Style.Light });
 }
 

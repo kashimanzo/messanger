@@ -657,8 +657,8 @@ export function CampaignsPage() {
         onClick={() => navigate('/campaigns/clicksend/new')}
         sx={{
           position: 'fixed',
-          bottom: 'calc(20px + env(safe-area-inset-bottom))',
-          right: 'calc(20px + env(safe-area-inset-right))',
+          bottom: 'calc(20px + max(20px, env(safe-area-inset-bottom, 0px)))',
+          right: 'calc(20px + env(safe-area-inset-right, 0px))',
         }}
       >
         <FiPlus size={24} />

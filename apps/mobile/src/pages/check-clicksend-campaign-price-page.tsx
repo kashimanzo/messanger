@@ -218,7 +218,11 @@ export function CheckClickSendCampaignPricePage() {
 
       <Container
         maxWidth="sm"
-        sx={{ py: 1.5, px: 2, pb: 'calc(168px + env(safe-area-inset-bottom))' }}
+        sx={{
+          py: 1.5,
+          px: 2,
+          pb: 'calc(168px + max(20px, env(safe-area-inset-bottom, 0px)))',
+        }}
       >
         <Stack spacing={1.5}>
           <Alert severity="info" sx={{ '& .MuiAlert-message': { py: 0.5 } }}>
@@ -396,7 +400,7 @@ export function CheckClickSendCampaignPricePage() {
           right: 0,
           zIndex: 10,
           p: 1.5,
-          pb: 'calc(12px + env(safe-area-inset-bottom))',
+          pb: 'calc(12px + max(20px, env(safe-area-inset-bottom, 0px)))',
           bgcolor: 'background.paper',
           borderTop: '1px solid',
           borderColor: 'divider',

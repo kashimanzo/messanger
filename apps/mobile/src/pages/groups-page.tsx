@@ -120,8 +120,8 @@ export function GroupsPage() {
         onClick={() => navigate('/groups/new')}
         sx={{
           position: 'fixed',
-          bottom: 'calc(24px + env(safe-area-inset-bottom))',
-          right: 'calc(24px + env(safe-area-inset-right))',
+          bottom: 'calc(24px + max(20px, env(safe-area-inset-bottom, 0px)))',
+          right: 'calc(24px + env(safe-area-inset-right, 0px))',
         }}
       >
         <FiPlus size={24} />

@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 import { AppBar, IconButton, Toolbar, Typography } from '@mui/material';
 import { FiArrowLeft } from 'react-icons/fi';
+import { SAFE_TOP } from '../lib/safe-area';
 
 type MobileAppBarProps = {
   title: string;
@@ -20,7 +21,7 @@ export function MobileAppBar({
       position="sticky"
       elevation={0}
       sx={{
-        pt: 'env(safe-area-inset-top)',
+        pt: SAFE_TOP,
         bgcolor: 'background.paper',
         borderBottom: '1px solid',
         borderColor: 'divider',

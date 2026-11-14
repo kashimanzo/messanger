@@ -42,6 +42,12 @@ const LoginPage = lazy(() =>
 const PhonebookPage = lazy(() =>
   import('../pages/phonebook-page').then((m) => ({ default: m.PhonebookPage })),
 );
+const PaymentPage = lazy(() =>
+  import('../pages/payment-page').then((m) => ({ default: m.PaymentPage })),
+);
+const ProfilePage = lazy(() =>
+  import('../pages/profile-page').then((m) => ({ default: m.ProfilePage })),
+);
 const RegisterPage = lazy(() =>
   import('../pages/register-page').then((m) => ({ default: m.RegisterPage })),
 );
@@ -180,6 +186,22 @@ export function App() {
           element={
             <ProtectedLazy>
               <GroupFormPage />
+            </ProtectedLazy>
+          }
+        />
+        <Route
+          path="/payments"
+          element={
+            <ProtectedLazy>
+              <PaymentPage />
+            </ProtectedLazy>
+          }
+        />
+        <Route
+          path="/profile"
+          element={
+            <ProtectedLazy>
+              <ProfilePage />
             </ProtectedLazy>
           }
         />
