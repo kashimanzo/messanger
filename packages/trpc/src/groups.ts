@@ -158,3 +158,54 @@ export async function replaceGroupMembers(
     }
   }
 }
+
+export type ContactGroupMembership = {
+  id: string;
+  name: string;
+};
+
+/** Map each contact to the groups it belongs to (for phonebook / picker UX). */
+export async function listContactGroupMemberships(userId: string) {
+  const { prisma } = await import('@bulk-messanger/database');
+
+  const [contacts, memberships] = await Promise.all([
+    prisma.contact.findMany({
+      where: { userId },
+      select: { id: true },
+    }),
+    prisma.contactGroupMember.findMany({
+      where: { group: { userId } },
+      select: {
+        contactId: true,
+        group: {
+          select: { id: true, name: true },
+        },
+      },
+      orderBy: {
+        group: { name: 'asc' },
+      },
+    }),
+  ]);
+
+  const byContactId: Record<string, ContactGroupMembership[]> = {};
+
+  for (const row of memberships) {
+    const existing = byContactId[row.contactId] ?? [];
+    if (!existing.some((group) => group.id === row.group.id)) {
+      existing.push({ id: row.group.id, name: row.group.name });
+      byContactId[row.contactId] = existing;
+    }
+  }
+
+  const ungroupedIds = contacts
+    .filter((contact) => !(byContactId[contact.id]?.length))
+    .map((contact) => contact.id);
+
+  return {
+    byContactId,
+    ungroupedIds,
+    groupedCount: contacts.length - ungroupedIds.length,
+    ungroupedCount: ungroupedIds.length,
+    totalContacts: contacts.length,
+  };
+}

@@ -16,7 +16,7 @@ import { trpc } from '../lib/trpc';
 
 export function SmsTemplateFormPage() {
   const navigate = useNavigate();
-  const { showError } = useFeedback();
+  const { showError, showSuccess } = useFeedback();
   const { templateId } = useParams();
   const editingId = templateId ? Number(templateId) : null;
   const isEditing = Number.isFinite(editingId) && (editingId as number) > 0;
@@ -40,18 +40,19 @@ export function SmsTemplateFormPage() {
   const createTemplate = trpc.createClickSendTemplate.useMutation({
     onSuccess: async () => {
       await utils.listClickSendTemplates.invalidate();
+      showSuccess('Template saved.');
       navigate('/templates');
     },
   });
   const updateTemplate = trpc.updateClickSendTemplate.useMutation({
     onSuccess: async () => {
       await utils.listClickSendTemplates.invalidate();
+      showSuccess('Template updated.');
       navigate('/templates');
     },
   });
 
   const isPending = createTemplate.isPending || updateTemplate.isPending;
-
 
   const handleSave = async () => {
     if (!templateName.trim() || !body.trim()) {
@@ -92,7 +93,9 @@ export function SmsTemplateFormPage() {
             </Box>
           )}
 
-          {existing.error && <Alert severity="error">{existing.error.message}</Alert>}
+          {existing.error && (
+            <Alert severity="error">{existing.error.message}</Alert>
+          )}
 
           <TextField
             label="Template name"
@@ -109,7 +112,7 @@ export function SmsTemplateFormPage() {
             minRows={6}
             fullWidth
             helperText={`${body.length}/1600`}
-            inputProps={{ maxLength: 1600 }}
+            slotProps={{ htmlInput: { maxLength: 1600 } }}
           />
 
           <Button
@@ -117,8 +120,13 @@ export function SmsTemplateFormPage() {
             size="large"
             onClick={() => void handleSave()}
             disabled={isPending || (isEditing && existing.isLoading)}
+            sx={{ borderRadius: 0 }}
           >
-            {isPending ? <CircularProgress size={24} color="inherit" /> : 'Save template'}
+            {isPending ? (
+              <CircularProgress size={24} color="inherit" />
+            ) : (
+              'Save template'
+            )}
           </Button>
         </Stack>
       </Container>

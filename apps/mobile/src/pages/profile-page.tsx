@@ -165,7 +165,7 @@ export function ProfilePage() {
                     sx={{
                       width: 48,
                       height: 48,
-                      borderRadius: '12px',
+                      borderRadius: 0,
                       bgcolor: 'primary.light',
                       color: 'primary.main',
                       display: 'flex',

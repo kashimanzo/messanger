@@ -84,7 +84,7 @@ function HomeActionTile({
               sx={{
                 width: 44,
                 height: 44,
-                borderRadius: '12px',
+                borderRadius: 0,
                 bgcolor: tone.bg,
                 color: tone.fg,
                 display: 'flex',
@@ -398,7 +398,7 @@ export function HomePage() {
         slotProps={{
           paper: {
             sx: {
-              borderRadius: 3,
+              borderRadius: 0,
               minWidth: 220,
               border: '1px solid',
               borderColor: 'divider',
@@ -412,7 +412,7 @@ export function HomePage() {
           <MenuItem
             key={`${action.path}:${action.name}`}
             onClick={() => openSendPath(action.path)}
-            sx={{ py: 1.25, borderRadius: 2, mx: 0.5 }}
+            sx={{ py: 1.25, borderRadius: 0, mx: 0.5 }}
           >
             <ListItemIcon sx={{ minWidth: 36, color: 'primary.main' }}>
               {action.icon}

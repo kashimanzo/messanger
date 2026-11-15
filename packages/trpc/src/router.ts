@@ -19,6 +19,7 @@ import {
   getOwnedContactGroup,
   groupInclude,
   groupSummaryInclude,
+  listContactGroupMemberships,
   replaceGroupMembers,
   serializeContactGroup,
   serializeContactGroupSummary,
@@ -448,6 +449,9 @@ export const appRouter = router({
 
       return groups.map((group) => serializeContactGroup(group));
     }),
+  listContactGroupMemberships: protectedProcedure.query(async ({ ctx }) => {
+    return listContactGroupMemberships(ctx.user.id);
+  }),
   getContactGroup: protectedProcedure
     .input(z.object({ id: z.string().min(1) }))
     .query(async ({ ctx, input }) => {
@@ -651,7 +655,6 @@ export const appRouter = router({
           .transform((value) => value.replace(/\D/g, ''))
           .pipe(z.string().min(3).max(4)),
         name: z.string().trim().min(2).max(100),
-        bankName: z.string().trim().min(2).max(100),
       }),
     )
     .mutation(async ({ input }) => {
@@ -661,7 +664,7 @@ export const appRouter = router({
         const { updateClickSendPaymentCard } = await import(
           '@bulk-messanger/clicksend'
         );
-        // Card details are forwarded to ClickSend only; nothing is stored locally.
+        // Same fields as ClickSend dashboard manage-card flow (no bank name).
         return updateClickSendPaymentCard(input);
       } catch (error) {
         throw toTrpcClickSendError(error);

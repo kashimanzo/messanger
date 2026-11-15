@@ -1,4 +1,10 @@
-import { useRef, memo, type ReactNode } from 'react';
+import {
+  useRef,
+  memo,
+  type PointerEventHandler,
+  type ReactNode,
+  type Ref,
+} from 'react';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { Box } from '@mui/material';
 
@@ -6,20 +12,42 @@ type VirtualListProps<T> = {
   items: T[];
   estimateSize: number;
   overscan?: number;
+  /** Explicit scroll viewport height (required for absolute-positioned rows). */
+  height?: number | string;
   maxHeight?: number | string;
   getItemKey: (item: T, index: number) => string | number;
   renderItem: (item: T, index: number) => ReactNode;
   sx?: Record<string, unknown>;
+  scrollRef?: Ref<HTMLDivElement | null>;
+  onPointerDown?: PointerEventHandler<HTMLDivElement>;
+  onPointerMove?: PointerEventHandler<HTMLDivElement>;
+  onPointerUp?: PointerEventHandler<HTMLDivElement>;
+  onPointerCancel?: PointerEventHandler<HTMLDivElement>;
 };
+
+function assignRef<T>(ref: Ref<T> | undefined, value: T) {
+  if (!ref) return;
+  if (typeof ref === 'function') {
+    ref(value);
+    return;
+  }
+  (ref as { current: T }).current = value;
+}
 
 function VirtualListInner<T>({
   items,
   estimateSize,
   overscan = 8,
+  height,
   maxHeight = '42vh',
   getItemKey,
   renderItem,
   sx,
+  scrollRef,
+  onPointerDown,
+  onPointerMove,
+  onPointerUp,
+  onPointerCancel,
 }: VirtualListProps<T>) {
   const parentRef = useRef<HTMLDivElement | null>(null);
   const virtualizer = useVirtualizer({
@@ -30,21 +58,40 @@ function VirtualListInner<T>({
     getItemKey: (index) => getItemKey(items[index]!, index),
   });
 
+  const contentHeight = Math.max(
+    virtualizer.getTotalSize(),
+    items.length * estimateSize,
+  );
+
+  const resolvedHeight = height ?? maxHeight;
+  const fillParent =
+    resolvedHeight === '100%' || resolvedHeight === '100dvh';
+
   return (
     <Box
-      ref={parentRef}
+      ref={(node: HTMLDivElement | null) => {
+        parentRef.current = node;
+        assignRef(scrollRef, node);
+      }}
+      onPointerDown={onPointerDown}
+      onPointerMove={onPointerMove}
+      onPointerUp={onPointerUp}
+      onPointerCancel={onPointerCancel}
       sx={{
-        maxHeight,
+        height: resolvedHeight,
+        maxHeight: fillParent ? 'none' : maxHeight,
+        minHeight: fillParent ? 0 : Math.min(contentHeight, 240),
+        flex: fillParent ? 1 : undefined,
         overflowY: 'auto',
         overflowX: 'hidden',
         WebkitOverflowScrolling: 'touch',
-        contain: 'strict',
+        // Do not use contain:strict — it sizes as empty and collapses height.
         ...sx,
       }}
     >
       <Box
         sx={{
-          height: virtualizer.getTotalSize(),
+          height: contentHeight,
           width: '100%',
           position: 'relative',
         }}

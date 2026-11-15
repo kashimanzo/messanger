@@ -77,7 +77,6 @@ const cardSchema = z.object({
     .trim()
     .regex(/^\d{3,4}$/, 'CVC must be 3 or 4 digits'),
   name: z.string().trim().min(2, 'Name on card is required').max(100),
-  bankName: z.string().trim().min(2, 'Bank name is required').max(100),
 });
 
 type CardForm = z.infer<typeof cardSchema>;
@@ -136,7 +135,6 @@ export function PaymentPage() {
       expiryYear: '',
       cvc: '',
       name: '',
-      bankName: '',
     },
   });
 
@@ -212,7 +210,6 @@ export function PaymentPage() {
       expiryYear: Number(values.expiryYear),
       cvc: values.cvc,
       name: values.name,
-      bankName: values.bankName,
     });
   });
 
@@ -236,7 +233,7 @@ export function PaymentPage() {
       sx={{
         border: '1px solid',
         borderColor: accent === 'power' ? 'warning.main' : 'divider',
-        borderRadius: 2,
+        borderRadius: 0,
         bgcolor: accent === 'power' ? 'warning.light' : 'background.paper',
         overflow: 'hidden',
       }}
@@ -513,7 +510,7 @@ export function PaymentPage() {
                         key={card.id}
                         variant="outlined"
                         sx={{
-                          borderRadius: 2,
+                          borderRadius: 0,
                           mb: 1.25,
                           borderColor:
                             selectedCardId === card.id
@@ -569,33 +566,28 @@ export function PaymentPage() {
               <Collapse in={showCardForm}>
                 <Box component="form" onSubmit={onSaveCard}>
                   <Alert severity="info" sx={{ mb: 1.5 }}>
-                    Card details go to ClickSend only. Saving a new card
-                    replaces the previous active card on this account.
+                    Same fields as ClickSend Billing → Manage cards. Details go
+                    to ClickSend only and replace the active card on this
+                    account.
                   </Alert>
                   <Stack spacing={1.25}>
-                    <TextField
-                      label="Name on card"
-                      fullWidth
-                      autoComplete="cc-name"
-                      error={!!cardForm.formState.errors.name}
-                      helperText={cardForm.formState.errors.name?.message}
-                      {...cardForm.register('name')}
-                    />
                     <TextField
                       label="Card number"
                       fullWidth
                       autoComplete="cc-number"
                       inputMode="numeric"
+                      placeholder="•••• •••• •••• ••••"
                       error={!!cardForm.formState.errors.number}
                       helperText={cardForm.formState.errors.number?.message}
                       {...cardForm.register('number')}
                     />
                     <Stack direction="row" spacing={1}>
                       <TextField
-                        label="MM"
+                        label="Expiry month"
                         fullWidth
                         autoComplete="cc-exp-month"
                         inputMode="numeric"
+                        placeholder="MM"
                         error={!!cardForm.formState.errors.expiryMonth}
                         helperText={
                           cardForm.formState.errors.expiryMonth?.message
@@ -603,10 +595,11 @@ export function PaymentPage() {
                         {...cardForm.register('expiryMonth')}
                       />
                       <TextField
-                        label="YYYY"
+                        label="Expiry year"
                         fullWidth
                         autoComplete="cc-exp-year"
                         inputMode="numeric"
+                        placeholder="YYYY"
                         error={!!cardForm.formState.errors.expiryYear}
                         helperText={
                           cardForm.formState.errors.expiryYear?.message
@@ -618,22 +611,25 @@ export function PaymentPage() {
                         fullWidth
                         autoComplete="cc-csc"
                         inputMode="numeric"
+                        placeholder="CVC"
                         error={!!cardForm.formState.errors.cvc}
                         helperText={cardForm.formState.errors.cvc?.message}
                         {...cardForm.register('cvc')}
                       />
                     </Stack>
                     <TextField
-                      label="Bank name"
+                      label="Name on card"
                       fullWidth
-                      error={!!cardForm.formState.errors.bankName}
-                      helperText={cardForm.formState.errors.bankName?.message}
-                      {...cardForm.register('bankName')}
+                      autoComplete="cc-name"
+                      error={!!cardForm.formState.errors.name}
+                      helperText={cardForm.formState.errors.name?.message}
+                      {...cardForm.register('name')}
                     />
                     <Button
                       type="submit"
                       variant="contained"
                       disabled={updateCard.isPending}
+                      sx={{ borderRadius: 0 }}
                     >
                       {updateCard.isPending ? (
                         <CircularProgress size={20} color="inherit" />
@@ -686,7 +682,7 @@ export function PaymentPage() {
                   <Card
                     key={tx.id}
                     variant="outlined"
-                    sx={{ borderRadius: 2 }}
+                    sx={{ borderRadius: 0 }}
                   >
                     <CardContent
                       sx={{

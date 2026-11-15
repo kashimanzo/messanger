@@ -270,11 +270,12 @@ export function ImportContactsPage() {
                 <VirtualList
                   items={filteredContacts}
                   estimateSize={IMPORT_ROW_HEIGHT}
+                  height="calc(100dvh - 280px)"
                   maxHeight="calc(100dvh - 280px)"
                   getItemKey={(contact) => contact.deviceContactId}
                   sx={{
                     bgcolor: 'background.paper',
-                    borderRadius: 2,
+                    borderRadius: 0,
                     border: '1px solid',
                     borderColor: 'divider',
                   }}

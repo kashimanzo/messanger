@@ -1,8 +1,8 @@
 import { createTheme } from '@mui/material/styles';
 
 /**
- * Simple Google / Material-style theme: blue primary, light grey surfaces,
- * soft elevation, Roboto typography.
+ * Simple Google / Material-style theme: blue primary, light grey surfaces.
+ * Border radius is 0 app-wide.
  */
 export const theme = createTheme({
   palette: {
@@ -46,7 +46,7 @@ export const theme = createTheme({
     divider: '#e8eaed',
   },
   shape: {
-    borderRadius: 16,
+    borderRadius: 0,
   },
   typography: {
     fontFamily:
@@ -97,7 +97,7 @@ export const theme = createTheme({
       },
       styleOverrides: {
         root: {
-          borderRadius: 20,
+          borderRadius: 0,
           paddingInline: 18,
         },
         contained: {
@@ -114,14 +114,30 @@ export const theme = createTheme({
       },
       styleOverrides: {
         root: {
+          borderRadius: 0,
           border: '1px solid #e8eaed',
           boxShadow: '0 1px 2px rgba(60, 64, 67, 0.08)',
+        },
+      },
+    },
+    MuiPaper: {
+      styleOverrides: {
+        root: {
+          borderRadius: 0,
+        },
+      },
+    },
+    MuiDialog: {
+      styleOverrides: {
+        paper: {
+          borderRadius: 0,
         },
       },
     },
     MuiFab: {
       styleOverrides: {
         root: {
+          borderRadius: 0,
           boxShadow:
             '0 1px 3px 0 rgba(60,64,67,.3), 0 4px 8px 3px rgba(60,64,67,.15)',
         },
@@ -136,11 +152,19 @@ export const theme = createTheme({
     MuiChip: {
       styleOverrides: {
         root: {
+          borderRadius: 0,
           fontWeight: 500,
         },
         sizeSmall: {
           height: 22,
           fontSize: '0.7rem',
+        },
+      },
+    },
+    MuiAvatar: {
+      styleOverrides: {
+        root: {
+          borderRadius: 0,
         },
       },
     },
@@ -185,6 +209,23 @@ export const theme = createTheme({
           borderRadius: 0,
           paddingTop: 6,
           paddingBottom: 6,
+        },
+      },
+    },
+    MuiMenu: {
+      styleOverrides: {
+        paper: {
+          borderRadius: 0,
+        },
+      },
+    },
+    MuiLinearProgress: {
+      styleOverrides: {
+        root: {
+          borderRadius: 0,
+        },
+        bar: {
+          borderRadius: 0,
         },
       },
     },

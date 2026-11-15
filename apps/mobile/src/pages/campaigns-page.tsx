@@ -165,7 +165,7 @@ function EmptyState({
         sx={{
           width: 56,
           height: 56,
-          borderRadius: '16px',
+          borderRadius: 0,
           bgcolor: 'primary.light',
           color: 'primary.main',
           display: 'inline-flex',
@@ -365,9 +365,9 @@ function LocalTimelineCard({
               value={item.progress}
               sx={{
                 height: 6,
-                borderRadius: 3,
+                borderRadius: 0,
                 bgcolor: 'secondary.light',
-                '& .MuiLinearProgress-bar': { borderRadius: 3 },
+                '& .MuiLinearProgress-bar': { borderRadius: 0 },
               }}
             />
 
@@ -588,7 +588,7 @@ export function CampaignsPage() {
                     sx={{
                       width: 36,
                       height: 36,
-                      borderRadius: '10px',
+                      borderRadius: 0,
                       bgcolor: 'primary.light',
                       color: 'primary.main',
                       display: 'flex',
@@ -622,7 +622,7 @@ export function CampaignsPage() {
                     sx={{
                       width: 36,
                       height: 36,
-                      borderRadius: '10px',
+                      borderRadius: 0,
                       bgcolor: '#fef7e0',
                       color: '#e37400',
                       display: 'flex',

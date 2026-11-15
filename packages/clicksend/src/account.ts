@@ -57,7 +57,8 @@ export type ClickSendPaymentCardInput = {
   expiryYear: number;
   cvc: string;
   name: string;
-  bankName: string;
+  /** Optional — dashboard does not collect this; API still accepts a brand label. */
+  bankName?: string;
 };
 
 export type ClickSendTransaction = {
@@ -376,15 +377,29 @@ export async function purchaseClickSendRechargePackage(
   };
 }
 
+/** Infer card network for ClickSend's legacy bank_name field (not shown in dashboard UI). */
+function cardBrandFromNumber(number: string): string {
+  const digits = number.replace(/\D/g, '');
+  if (/^4/.test(digits)) return 'Visa';
+  if (/^(5[1-5]|2[2-7])/.test(digits)) return 'Mastercard';
+  if (/^3[47]/.test(digits)) return 'American Express';
+  if (/^35/.test(digits)) return 'JCB';
+  if (/^6(?:011|5)/.test(digits)) return 'Discover';
+  return 'Card';
+}
+
 /**
  * Saves a card on the ClickSend account.
  * Card data is forwarded to ClickSend only — never persisted by this app.
+ * Matches dashboard fields: number, expiry, CVC, name on card.
  */
 export async function updateClickSendPaymentCard(
   input: ClickSendPaymentCardInput,
 ): Promise<ClickSendPaymentCard> {
   const number = input.number.replace(/\D/g, '');
   const cvcDigits = input.cvc.replace(/\D/g, '');
+  const bankName =
+    input.bankName?.trim() || cardBrandFromNumber(number);
 
   await clickSendRequest<{ token?: string }>('/recharge/credit-card', {
     method: 'PUT',
@@ -394,7 +409,8 @@ export async function updateClickSendPaymentCard(
       expiry_year: input.expiryYear,
       cvc: Number(cvcDigits),
       name: input.name.trim(),
-      bank_name: input.bankName.trim(),
+      // REST still expects bank_name; dashboard hides it — send card brand.
+      bank_name: bankName,
     },
   });
 

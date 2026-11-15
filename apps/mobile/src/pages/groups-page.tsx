@@ -23,6 +23,7 @@ import {
 import { FiPlus, FiTrash2 } from 'react-icons/fi';
 import { useFeedback } from '../components/feedback-provider';
 import { MobileAppBar } from '../components/mobile-app-bar';
+import { useContactGroupMemberships } from '../hooks/use-contact-group-memberships';
 import { getErrorMessage } from '../lib/get-error-message';
 import { trpc } from '../lib/trpc';
 
@@ -31,9 +32,13 @@ export function GroupsPage() {
   const { showError, showSuccess } = useFeedback();
   const utils = trpc.useUtils();
   const { data: groups, isLoading, error } = trpc.listContactGroups.useQuery();
+  const memberships = useContactGroupMemberships();
   const deleteGroup = trpc.deleteContactGroup.useMutation({
     onSuccess: async () => {
-      await utils.listContactGroups.invalidate();
+      await Promise.all([
+        utils.listContactGroups.invalidate(),
+        utils.listContactGroupMemberships.invalidate(),
+      ]);
       setDeleteTargetId(null);
       showSuccess('Group deleted.');
     },
@@ -60,6 +65,25 @@ export function GroupsPage() {
       <MobileAppBar title="Contact groups" onBack={() => navigate('/home')} />
 
       <Container maxWidth="sm" sx={{ py: 3, pb: 10 }}>
+        {memberships.ungroupedCount > 0 ? (
+          <Alert
+            severity="info"
+            sx={{ mb: 2 }}
+            action={
+              <Button
+                color="inherit"
+                size="small"
+                onClick={() => navigate('/phonebook?filter=ungrouped')}
+              >
+                View
+              </Button>
+            }
+          >
+            {memberships.ungroupedCount} contact
+            {memberships.ungroupedCount === 1 ? '' : 's'} not in any group.
+          </Alert>
+        ) : null}
+
         {isLoading && (
           <Box sx={{ display: 'flex', justifyContent: 'center', py: 6 }}>
             <CircularProgress />
@@ -83,7 +107,7 @@ export function GroupsPage() {
           <List
             sx={{
               bgcolor: 'background.paper',
-              borderRadius: 2,
+              borderRadius: 0,
               border: '1px solid',
               borderColor: 'divider',
             }}
